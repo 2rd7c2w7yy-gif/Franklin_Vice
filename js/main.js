@@ -23,6 +23,9 @@ const Game = {
   hintT: 0,
   lastRamCrime: -10,
   sirenNear: false,
+  mode: '2d',
+  lastDt: 0.016,
+  glCanvas: null,
 
   init() {
     this.canvas = document.getElementById('game');
@@ -42,6 +45,11 @@ const Game = {
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
     this.spawnInitial();
+    this.glCanvas = document.getElementById('gl');
+    if (!window.__TEST__) {
+      try { Render3D.init(); } catch (e) { Render3D.available = false; }
+    }
+    this.setMode(Render3D.available ? '3d' : '2d', true);
     if (window.__TEST__) return;
     let last = performance.now();
     const loop = (t) => {
@@ -59,6 +67,18 @@ const Game = {
     this.vh = window.innerHeight;
     this.canvas.width = this.vw;
     this.canvas.height = this.vh;
+    if (Render3D.available) Render3D.setSize(this.vw, this.vh);
+  },
+
+  setMode(m, silent) {
+    if (m === '3d' && !Render3D.available) {
+      this.mode = '2d';
+      if (!silent) this.toast('WebGL nicht verfügbar — 2D-Modus aktiv');
+    } else {
+      this.mode = m;
+    }
+    if (this.glCanvas) this.glCanvas.style.display = this.mode === '3d' ? 'block' : 'none';
+    if (!silent) this.toast(this.mode === '3d' ? '3D-Modus — Taste 2 für 2D-Top-Down' : '2D-Modus — Taste 3 für 3D');
   },
 
   spawnInitial() {
@@ -88,6 +108,8 @@ const Game = {
       if (c === 'KeyP' && this.state === 'play') this.paused = !this.paused;
       if (c === 'KeyM') this.toast(SFX.toggleMute() ? 'Ton aus' : 'Ton an');
       if (c === 'KeyE' && this.state === 'play') this.tryInteract();
+      if (c === 'Key2') this.setMode('2d');
+      if (c === 'Key3') this.setMode('3d');
     }
   },
 
@@ -135,6 +157,7 @@ const Game = {
   },
 
   update(dt) {
+    this.lastDt = dt;
     this.time += dt;
     this.hintT += dt;
     this.dayT = (this.dayT + dt / CFG.DAY_LENGTH) % 1;
@@ -507,6 +530,15 @@ const Game = {
   render() {
     const g = this.ctx;
     const vw = this.vw, vh = this.vh;
+    if (this.mode === '3d' && Render3D.available) {
+      Render3D.render(this.lastDt);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, vw, vh);
+      this.drawHUD(g);
+      this.drawMinimap(g);
+      this.drawOverlays(g);
+      return;
+    }
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#0b0b14';
     g.fillRect(0, 0, vw, vh);
@@ -573,6 +605,11 @@ const Game = {
 
     this.drawHUD(g);
     this.drawMinimap(g);
+    this.drawOverlays(g);
+  },
+
+  drawOverlays(g) {
+    const vw = this.vw, vh = this.vh;
     if (this.state === 'title') this.drawTitle(g);
     if (this.state === 'wasted') this.drawDeath(g, 'WASTED', 'rgba(140,10,10,0.55)', 'R = Wiederbeleben im Klinikum');
     if (this.state === 'busted') this.drawDeath(g, 'BUSTED', 'rgba(10,40,140,0.55)', 'R = Wieder freilassen (20% Strafe)');
@@ -761,7 +798,7 @@ const Game = {
       g.textAlign = 'left';
       g.font = '13px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,255,255,' + clamp(25 - this.hintT, 0, 1) * 0.75 + ')';
-      g.fillText('WASD/Pfeile = fahren · E = ein-/aussteigen, Mission · Leertaste = Handbremse · F/Klick = schießen · P = Pause · M = Ton', 16, vh - 16);
+      g.fillText('WASD/Pfeile = fahren · E = ein-/aussteigen, Mission · Leertaste = Handbremse · F/Klick = schießen · 2/3 = 2D/3D · P = Pause · M = Ton', 16, vh - 16);
     }
 
     g.textAlign = 'center';
@@ -838,7 +875,7 @@ const Game = {
       'WASD / Pfeile = bewegen · E = Auto/Mission · Leertaste = Handbremse',
       'F oder Klick = schießen · P = Pause · M = Ton an/aus',
       'Gelbe Marker = Missionen (Taxi, Pakete, Wald-Sprint)',
-      'Vorsicht: Polizei-Level ★ bei Verbrechen — WASTED / BUSTED!'
+      '2 = 2D-Top-Down · 3 = 3D (Third-Person) — Vorsicht: ★ bei Verbrechen → WASTED / BUSTED!'
     ];
     lines.forEach((l, i) => g.fillText(l, vw / 2, vh / 2 - 16 + i * 26));
     if (Math.floor(this.time * 1.6) % 2 === 0 || this.time < 0.1) {

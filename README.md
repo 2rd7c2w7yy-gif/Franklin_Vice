@@ -26,6 +26,7 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 | `E` | Auto klauen / aussteigen, Mission am gelben Marker starten |
 | `Leertaste` | Handbremse (Drift) |
 | `F` oder Mausklick | Schießen |
+| `2` / `3` | 2D-Top-Down / 3D-Modus umschalten |
 | `P` | Pause |
 | `M` | Ton an/aus |
 | `R` | Nach WASTED / BUSTED neu starten |
@@ -40,12 +41,18 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 - Tag-Nacht-Zyklus mit Straßenlaternen, Scheinwerfern und leuchtenden Neon-Schildern
 - Minimap, HUD (Geld, Leben, Sterne, Tacho, Missions-Timer)
 - Komplett synthetischer Sound via WebAudio (Motor, Sirene, Schüsse, Explosionen) — keine Audio-Dateien
+- **3D-Modus** (Standard, wenn WebGL verfügbar; Taste `3`, Taste `2` für 2D): Third-Person-Kamera,
+  Low-Poly-Gebäude und Bäume aus derselben Karte, Scheinwerfer-Kegel und leuchtende Neon-Schilder
+  bei Nacht, Straßenlaternen, Tag/Nacht-Zyklus mit Sonnenstand, Nebel und Vice-City-Sonnenuntergang.
+  Ohne WebGL schaltet das Spiel automatisch auf den 2D-Modus um.
 
 ## Technik
 
-Reines HTML5 Canvas + Vanilla JavaScript, keine Bibliotheken, keine externen Assets.
+HTML5 Canvas (2D) + WebGL via **Three.js r149** (MIT-Lizenz, lokal vendored in
+`js/vendor/three.min.js` — keine CDN-Abhängigkeit, läuft offline). Gameplay und Sound sind
+reines Vanilla JS ohne Abhängigkeiten.
 Dateien: `index.html`, `style.css`, `js/config.js`, `js/audio.js`, `js/map.js`,
-`js/entities.js`, `js/main.js`.
+`js/entities.js`, `js/render3d.js`, `js/main.js`, `js/vendor/three.min.js`.
 
 ## Lokaler Smoke-Test (optional, mit Node.js)
 

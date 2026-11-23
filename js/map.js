@@ -106,7 +106,7 @@ const World = {
     g.rotate(-Math.PI / 2);
     g.fillText('BAHNHOF KÄFERTAL', 0, 7);
     g.restore();
-    this.buildings.push({ x: bx, y: by, w: bw, h: bh });
+    this.buildings.push({ x: bx, y: by, w: bw, h: bh, color: '#b8452f' });
     this.pois.station = { x: CFG.ROAD_X[0], y: 1800, label: 'BAHNHOF KÄFERTAL' };
   },
 
@@ -154,7 +154,7 @@ const World = {
     g.font = 'bold 24px Verdana, sans-serif';
     g.textAlign = 'center';
     g.fillText('KLINIKUM', cx, by + bh - 16);
-    this.buildings.push({ x: bx, y: by, w: bw, h: bh });
+    this.buildings.push({ x: bx, y: by, w: bw, h: bh, color: '#e8e8e8' });
     this.pois.klinikum = { x: 3000, y: 2700, label: 'KLINIKUM (Respawn)' };
   },
 
@@ -228,6 +228,7 @@ const World = {
       g.fillRect(r.x + 6, r.y + 6, r.w - 12, r.h - 12);
       g.strokeStyle = 'rgba(0,0,0,0.4)';
       g.strokeRect(r.x, r.y, r.w, r.h);
+      r.color = col;
       this.buildings.push(r);
       if (Math.random() < 0.16 && this.neons.length < 26) {
         const t = CFG.NEON_TEXTS[Math.floor(Math.random() * CFG.NEON_TEXTS.length)];
