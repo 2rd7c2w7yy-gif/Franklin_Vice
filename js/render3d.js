@@ -17,6 +17,7 @@ const Render3D = {
   lampGlows: [],
   headlightCons: [],
   camPos: null,
+  camYaw: 0,
   fov: 62,
 
   init() {
@@ -81,16 +82,18 @@ const Render3D = {
     ground.position.set(W / 2, 0, H / 2);
     this.scene.add(ground);
 
+    this.facadeTexs = [this.makeFacadeTexture(0), this.makeFacadeTexture(1)];
     for (const b of World.buildings) {
       const h3 = 24 + ((b.x * 31 + b.y * 17) % 52);
-      const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(b.color || '#9aa0a8') });
-      const box = new THREE.Mesh(new THREE.BoxGeometry(b.w, h3, b.h), mat);
+      const tint = new THREE.Color(b.color || '#9aa0a8');
+      const ftex = this.facadeTexs[(b.x + b.y) % 2].clone();
+      ftex.needsUpdate = true;
+      ftex.repeat.set(Math.max(1, Math.round(b.w / 52)), Math.max(1, Math.round(h3 / 52)));
+      const sideMat = new THREE.MeshLambertMaterial({ map: ftex, color: tint });
+      const roofMat = new THREE.MeshLambertMaterial({ color: tint.clone().multiplyScalar(0.6) });
+      const box = new THREE.Mesh(new THREE.BoxGeometry(b.w, h3, b.h), [sideMat, sideMat, roofMat, roofMat, sideMat, sideMat]);
       box.position.set(b.x + b.w / 2, h3 / 2, b.y + b.h / 2);
       this.scene.add(box);
-      const roofMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(b.color || '#9aa0a8').multiplyScalar(0.72) });
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(b.w - 6, 3, b.h - 6), roofMat);
-      roof.position.set(b.x + b.w / 2, h3 - 1.5, b.y + b.h / 2);
-      this.scene.add(roof);
     }
 
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2f });
@@ -147,6 +150,30 @@ const Render3D = {
       spr.position.set(n.x, 20, n.y);
       this.scene.add(spr);
     }
+  },
+
+  makeFacadeTexture(variant) {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = variant ? '#c9c9c9' : '#d4d4d4';
+    g.fillRect(0, 0, 128, 256);
+    g.fillStyle = 'rgba(0,0,0,0.10)';
+    for (let y = 0; y < 256; y += 8) g.fillRect(0, y, 128, 1);
+    for (let r = 0; r < 8; r++) {
+      for (let col = 0; col < 4; col++) {
+        const x = 8 + col * 30, y = 12 + r * 30;
+        g.fillStyle = Math.random() < 0.14 ? '#ffdf9a' : '#2a3646';
+        g.fillRect(x, y, 20, 18);
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.fillRect(x, y, 20, 4);
+      }
+    }
+    const tex = new THREE.CanvasTexture(c);
+    if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
+    else tex.encoding = THREE.sRGBEncoding;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
   },
 
   radialTexture(inner, outer) {
@@ -375,7 +402,7 @@ const Render3D = {
   updateCamera(dt) {
     const p = Game.player;
     const pe = p.inCar || p;
-    const ang = pe.angle;
+    const ang = pe.angle + (this.camYaw || 0);
     const sp = p.inCar ? p.inCar.speedAbs() : Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     const dist = (p.inCar ? 160 : 115) + sp * 0.14;
     const height = (p.inCar ? 88 : 72) + sp * 0.05;

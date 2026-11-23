@@ -4,7 +4,8 @@ const Game = {
   vw: 0,
   vh: 0,
   keys: {},
-  mouse: { x: 0, y: 0, down: false },
+  mouse: { x: 0, y: 0, px: 0, down: false },
+  orbiting: false,
   state: 'title',
   paused: false,
   time: 0,
@@ -34,9 +35,24 @@ const Game = {
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', (e) => this.onKey(e, true));
     window.addEventListener('keyup', (e) => this.onKey(e, false));
-    window.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; });
-    window.addEventListener('mousedown', () => { this.mouse.down = true; SFX.init(); SFX.ensure(); });
-    window.addEventListener('mouseup', () => { this.mouse.down = false; });
+    window.addEventListener('blur', () => { this.keys = {}; this.mouse.down = false; this.orbiting = false; });
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('mousemove', (e) => {
+      if (this.orbiting) Render3D.camYaw = (Render3D.camYaw || 0) - (e.clientX - this.mouse.px) * 0.006;
+      this.mouse.px = e.clientX;
+      this.mouse.x = e.clientX;
+      this.mouse.y = e.clientY;
+    });
+    window.addEventListener('mousedown', (e) => {
+      SFX.init();
+      SFX.ensure();
+      if (e.button === 2) this.orbiting = true;
+      else if (e.button === 0) this.mouse.down = true;
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 2) this.orbiting = false;
+      else if (e.button === 0) this.mouse.down = false;
+    });
     World.build();
     this.player = {
       x: 1800, y: 1910, angle: -Math.PI / 2,
@@ -100,7 +116,7 @@ const Game = {
     const c = e.code;
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
     this.keys[c] = down;
-    if (down) {
+    if (down && !e.repeat) {
       SFX.init();
       SFX.ensure();
       if (c === 'Enter' && this.state === 'title') { this.state = 'play'; this.toast('Willkommen in FRANKLIN! Finde den gelben Marker.'); }
@@ -378,11 +394,33 @@ const Game = {
     if (p.health < 100 && p.state !== 'wasted') p.health = Math.min(100, p.health + dt * 1.2);
   },
 
+  aimAngle() {
+    const p = this.player;
+    if (this.mode === '3d' && Render3D.available && typeof THREE !== 'undefined') {
+      const nx = (this.mouse.x / this.vw) * 2 - 1;
+      const ny = -(this.mouse.y / this.vh) * 2 + 1;
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera({ x: nx, y: ny }, Render3D.camera);
+      const d = ray.ray.direction;
+      if (Math.abs(d.y) > 0.0001) {
+        const t = -ray.ray.origin.y / d.y;
+        if (t > 0) {
+          return Math.atan2(ray.ray.origin.z + d.z * t - p.y, ray.ray.origin.x + d.x * t - p.x);
+        }
+      }
+    }
+    const z = this.cam.zoom;
+    const wx = this.cam.x + (this.mouse.x - this.vw / 2) / z;
+    const wy = this.cam.y + (this.mouse.y - this.vh / 2) / z;
+    return Math.atan2(wy - p.y, wx - p.x);
+  },
+
   playerShoot() {
     const p = this.player;
     p.fireCd = CFG.FIRE_COOLDOWN;
     const src = p.inCar || p;
-    const a = src.angle;
+    const a = this.aimAngle();
+    if (!p.inCar) p.angle = a;
     const b = new Bullet(src.x + Math.cos(a) * 28, src.y + Math.sin(a) * 28, a, 'player');
     b.witnessed = this.peds.some(pd => !pd.dead && dist(pd.x, pd.y, p.x, p.y) < CFG.WITNESS_RANGE);
     this.bullets.push(b);
@@ -798,7 +836,7 @@ const Game = {
       g.textAlign = 'left';
       g.font = '13px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,255,255,' + clamp(25 - this.hintT, 0, 1) * 0.75 + ')';
-      g.fillText('WASD/Pfeile = fahren · E = ein-/aussteigen, Mission · Leertaste = Handbremse · F/Klick = schießen · 2/3 = 2D/3D · P = Pause · M = Ton', 16, vh - 16);
+      g.fillText('WASD/Pfeile = fahren · Maus = zielen · F/Klick = schießen · E = ein-/aussteigen, Mission · Leertaste = Handbremse · 2/3 = 2D/3D · rechte Maustaste = Kamera (3D) · P = Pause · M = Ton', 16, vh - 16);
     }
 
     g.textAlign = 'center';
@@ -873,7 +911,7 @@ const Game = {
     g.font = '17px Verdana, sans-serif';
     const lines = [
       'WASD / Pfeile = bewegen · E = Auto/Mission · Leertaste = Handbremse',
-      'F oder Klick = schießen · P = Pause · M = Ton an/aus',
+      'Maus = zielen · F oder Klick = schießen · rechte Maustaste ziehen = Kamera drehen (3D) · P = Pause · M = Ton',
       'Gelbe Marker = Missionen (Taxi, Pakete, Wald-Sprint)',
       '2 = 2D-Top-Down · 3 = 3D (Third-Person) — Vorsicht: ★ bei Verbrechen → WASTED / BUSTED!'
     ];

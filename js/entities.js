@@ -50,7 +50,9 @@ class Car {
     const k = hb ? CFG.CAR_LAT_HANDBRAKE : CFG.CAR_LAT;
     const lat = Math.max(0, 1 - k * dt);
     vLx *= lat; vLy *= lat;
-    this.angle += st * CFG.STEER_RATE * dt * clamp(vF / 140, -1, 1);
+    const sf = clamp(vF / 140, -1, 1);
+    const steerMag = Math.abs(vF) > 2 ? sf : 0.35 * (vF === 0 ? 1 : Math.sign(vF));
+    this.angle += st * CFG.STEER_RATE * dt * steerMag;
     const f = this.forward();
     this.vx = f.x * vF + vLx;
     this.vy = f.y * vF + vLy;

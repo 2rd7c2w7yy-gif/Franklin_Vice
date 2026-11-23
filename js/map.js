@@ -28,9 +28,31 @@ const World = {
     this.buildIntersections();
   },
 
+  shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = clamp((n >> 16) + amt, 0, 255);
+    const gch = clamp(((n >> 8) & 255) + amt, 0, 255);
+    const b = clamp((n & 255) + amt, 0, 255);
+    return 'rgb(' + r + ',' + gch + ',' + b + ')';
+  },
+
+  speckle(g, x, y, w, h, n, alpha, size) {
+    for (let i = 0; i < n; i++) {
+      g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,' + alpha + ')' : 'rgba(255,255,255,' + alpha + ')';
+      g.fillRect(x + Math.random() * w, y + Math.random() * h, size + Math.random() * size, size + Math.random() * size);
+    }
+  },
+
   paintBase(g) {
     g.fillStyle = CFG.PALETTE.sidewalk;
     g.fillRect(0, 0, this.W, this.H);
+    g.strokeStyle = 'rgba(0,0,0,0.08)';
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let x = 0; x <= this.W; x += 26) { g.moveTo(x, 0); g.lineTo(x, this.H); }
+    for (let y = 0; y <= this.H; y += 26) { g.moveTo(0, y); g.lineTo(this.W, y); }
+    g.stroke();
+    this.speckle(g, 0, 0, this.W, this.H, 9000, 0.05, 2);
   },
 
   paintForest(g) {
@@ -74,7 +96,7 @@ const World = {
         const b = this.blockRect(i, j);
         if (b.w < 120 || b.h < 120) {
           g.fillStyle = CFG.PALETTE.grassDark;
-          g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+          g.fillRect(b.x0, b.y0, b.w, b.h);
           continue;
         }
         if (i === 0 && j === 2) { this.paintStation(g, b); continue; }
@@ -90,7 +112,7 @@ const World = {
 
   paintStation(g, b) {
     g.fillStyle = '#6f7278';
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
     g.fillStyle = '#9aa0a8';
     g.fillRect(b.x0, b.y0 + 40, 60, b.h - 80);
     const bx = b.x0 + 70, by = b.y0 + 60, bw = Math.min(150, b.w - 90), bh = b.h - 120;
@@ -112,7 +134,8 @@ const World = {
 
   paintPlaza(g, b) {
     g.fillStyle = CFG.PALETTE.plaza;
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
+    this.speckle(g, b.x0, b.y0, b.w, b.h, 800, 0.06, 2);
     const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
     g.fillStyle = '#7fb2c9';
     g.beginPath(); g.arc(cx, cy, 26, 0, 7); g.fill();
@@ -140,7 +163,7 @@ const World = {
 
   paintKlinikum(g, b) {
     g.fillStyle = CFG.PALETTE.blockPave;
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
     const bx = b.x0 + 24, by = b.y0 + 24, bw = b.w - 48, bh = b.h - 48;
     g.fillStyle = '#e8e8e8';
     g.fillRect(bx, by, bw, bh);
@@ -160,7 +183,7 @@ const World = {
 
   paintFriedhof(g, b) {
     g.fillStyle = '#5c6b52';
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
     g.strokeStyle = 'rgba(255,255,255,0.35)';
     g.fillStyle = 'rgba(255,255,255,0.35)';
     for (let r = 0; r < 8; r++) {
@@ -180,7 +203,8 @@ const World = {
 
   paintPark(g, b) {
     g.fillStyle = CFG.PALETTE.grass;
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
+    this.speckle(g, b.x0, b.y0, b.w, b.h, 1200, 0.09, 3);
     const n = 5 + Math.floor(Math.random() * 5);
     for (let k = 0; k < n; k++) {
       const x = b.x0 + 30 + Math.random() * (b.w - 60);
@@ -196,7 +220,7 @@ const World = {
 
   paintBuildings(g, b) {
     g.fillStyle = CFG.PALETTE.blockPave;
-    g.fillRect(b.x0 - CFG.WALK, b.y0 - CFG.WALK, b.w + CFG.WALK * 2, b.h + CFG.WALK * 2);
+    g.fillRect(b.x0, b.y0, b.w, b.h);
     const m = 18, gap = 12;
     const mode = Math.random();
     const rects = [];
@@ -222,10 +246,17 @@ const World = {
     for (const r of rects) {
       if (r.w < 60 || r.h < 60) continue;
       const col = CFG.PALETTE.building[Math.floor(Math.random() * CFG.PALETTE.building.length)];
-      g.fillStyle = col;
+      g.fillStyle = this.shade(col, -22);
       g.fillRect(r.x, r.y, r.w, r.h);
-      g.fillStyle = CFG.PALETTE.roof;
+      g.fillStyle = this.shade(col, -40);
       g.fillRect(r.x + 6, r.y + 6, r.w - 12, r.h - 12);
+      const vents = 1 + Math.floor(Math.random() * 3);
+      for (let v = 0; v < vents; v++) {
+        g.fillStyle = 'rgba(0,0,0,0.28)';
+        g.fillRect(r.x + 12 + Math.random() * Math.max(4, r.w - 44), r.y + 12 + Math.random() * Math.max(4, r.h - 34), 12 + Math.random() * 18, 8 + Math.random() * 12);
+      }
+      g.fillStyle = 'rgba(255,255,255,0.10)';
+      g.fillRect(r.x + 6, r.y + 6, r.w - 12, 4);
       g.strokeStyle = 'rgba(0,0,0,0.4)';
       g.strokeRect(r.x, r.y, r.w, r.h);
       r.color = col;
@@ -266,6 +297,10 @@ const World = {
       const half = this.roadHalfAt(y);
       g.fillStyle = y === CFG.B38_Y ? CFG.PALETTE.asphaltB38 : CFG.PALETTE.asphalt;
       g.fillRect(0, y - half, this.W, half * 2);
+      this.speckle(g, 0, y - half, this.W, half * 2, 900, 0.07, 2);
+    }
+    for (const x of CFG.ROAD_X) {
+      this.speckle(g, x - CFG.ROAD_HALF, 0, CFG.ROAD_HALF * 2, this.H, 900, 0.07, 2);
     }
     g.strokeStyle = CFG.PALETTE.lane;
     g.lineWidth = 3;
