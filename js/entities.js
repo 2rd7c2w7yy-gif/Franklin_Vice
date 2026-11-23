@@ -62,43 +62,19 @@ class Car {
     return Math.abs(vF);
   }
 
-  followRoad(dt, laneOff) {
+  followRoad(dt) {
+    if (!this.wk) this.wk = World.newWalker();
     if (this.reverseTime > 0) {
       this.reverseTime -= dt;
-      this.x -= Math.cos(this.dir) * 130 * dt;
-      this.y -= Math.sin(this.dir) * 130 * dt;
-      this.angle = this.dir + Math.PI;
-      return;
+      World.advanceWalker(this.wk, -120 * dt);
+    } else {
+      World.advanceWalker(this.wk, this.aiSpeed * dt);
     }
-    const node = World.nearestIntersection(this.x, this.y, 30);
-    if (node) {
-      const id = node.x * 10000 + node.y;
-      if (this.lastNode !== id) {
-        this.lastNode = id;
-        const options = [];
-        const dirs = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
-        for (const d of dirs) {
-          if (Math.abs(angleDiff(d, this.dir + Math.PI)) < 0.01) continue;
-          const nx = node.x + Math.cos(d) * 600;
-          const ny = node.y + Math.sin(d) * 600;
-          if (nx > 60 && nx < World.W - 60 && ny > 60 && ny < World.H - 60) options.push(d);
-        }
-        if (options.length === 0) {
-          this.dir += Math.PI;
-        } else {
-          this.dir = choice(options);
-        }
-        const rx = -Math.sin(this.dir) * laneOff, ry = Math.cos(this.dir) * laneOff;
-        this.x = node.x + rx;
-        this.y = node.y + ry;
-        this.angle = this.dir;
-      }
-    }
-    this.x += Math.cos(this.dir) * this.aiSpeed * dt;
-    this.y += Math.sin(this.dir) * this.aiSpeed * dt;
-    this.angle = this.dir;
-    this.vx = Math.cos(this.dir) * this.aiSpeed;
-    this.vy = Math.sin(this.dir) * this.aiSpeed;
+    const w = World.roadWays[this.wk.w];
+    const p = World.walkerPoint(this.wk, World.laneOff(w));
+    this.x = p.x; this.y = p.y; this.angle = p.angle; this.dir = p.angle;
+    this.vx = Math.cos(p.angle) * this.aiSpeed;
+    this.vy = Math.sin(p.angle) * this.aiSpeed;
   }
 
   chase(dt, target, laneOff) {
@@ -170,7 +146,6 @@ class Ped {
 
   update(dt) {
     if (this.dead) return;
-    const laneOff = CFG.ROAD_HALF + CFG.WALK - 6;
     if (this.state === 'flee') {
       this.fleeT -= dt;
       const a = Math.atan2(this.y - this.fleeY, this.x - this.fleeX);
@@ -179,26 +154,11 @@ class Ped {
       this.angle = a;
       if (this.fleeT <= 0) this.state = 'walk';
     } else {
-      const node = World.nearestIntersection(this.x, this.y, 26);
-      if (node) {
-        const id = node.x * 10000 + node.y;
-        if (this.lastNode !== id) {
-          this.lastNode = id;
-          const dirs = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
-          const options = dirs.filter(d => Math.abs(angleDiff(d, this.dir + Math.PI)) > 0.01)
-            .filter(d => {
-              const nx = node.x + Math.cos(d) * 500, ny = node.y + Math.sin(d) * 500;
-              return nx > 60 && nx < World.W - 60 && ny > 60 && ny < World.H - 60;
-            });
-          this.dir = options.length ? choice(options) : this.dir + Math.PI;
-          const rx = -Math.sin(this.dir) * laneOff, ry = Math.cos(this.dir) * laneOff;
-          this.x = node.x + rx;
-          this.y = node.y + ry;
-        }
-      }
-      this.x += Math.cos(this.dir) * this.speed * dt;
-      this.y += Math.sin(this.dir) * this.speed * dt;
-      this.angle = this.dir;
+      if (!this.wk) this.wk = World.newWalker();
+      World.advanceWalker(this.wk, this.speed * dt);
+      const w = World.roadWays[this.wk.w];
+      const p = World.walkerPoint(this.wk, World.sidewalkOff(w));
+      this.x = p.x; this.y = p.y; this.angle = p.angle;
     }
     const hit = World.collideCircle(this.x, this.y, this.r);
     if (hit) { this.x += hit.x; this.y += hit.y; }

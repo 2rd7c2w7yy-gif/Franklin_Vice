@@ -17,9 +17,9 @@ const Game = {
   bullets: [],
   particles: [],
   mission: null,
-  marker: { x: 300, y: 1800, type: 'taxi' },
+  marker: { x: 1800, y: 1800, type: 'taxi' },
   toasts: [],
-  cam: { x: 1800, y: 1900, zoom: 1 },
+  cam: { x: 0, y: 0, zoom: 1 },
   shake: 0,
   hintT: 0,
   lastRamCrime: -10,
@@ -54,13 +54,16 @@ const Game = {
       else if (e.button === 0) this.mouse.down = false;
     });
     World.build();
+    this.marker = { x: World.pois.station.x, y: World.pois.station.y, type: 'taxi' };
     this.player = {
-      x: 1800, y: 1910, angle: -Math.PI / 2,
+      x: World.pois.plaza.x + 50, y: World.pois.plaza.y + 50, angle: -Math.PI / 2,
       vx: 0, vy: 0, r: 11,
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
     this.spawnInitial();
+    this.cam.x = this.player.x;
+    this.cam.y = this.player.y;
     this.glCanvas = document.getElementById('gl');
     if (!window.__TEST__) {
       try { Render3D.init(); } catch (e) { Render3D.available = false; }
@@ -99,15 +102,15 @@ const Game = {
 
   spawnInitial() {
     for (let i = 0; i < CFG.PARKED_COUNT; i++) {
-      const p = World.randomRoadPoint(14);
+      const p = World.randomRoadPoint(false);
       this.cars.push(new Car(p.x, p.y, p.angle, { ai: false }));
     }
     for (let i = 0; i < CFG.TRAFFIC_COUNT; i++) {
-      const p = World.randomRoadPoint(14);
+      const p = World.randomRoadPoint(false);
       this.cars.push(new Car(p.x, p.y, p.angle, { ai: true }));
     }
     for (let i = 0; i < CFG.PED_COUNT; i++) {
-      const p = World.randomRoadPoint(CFG.ROAD_HALF + CFG.WALK - 6);
+      const p = World.randomRoadPoint(true);
       this.peds.push(new Ped(p.x, p.y));
     }
   },
@@ -228,7 +231,7 @@ const Game = {
         let blockedByPlayer = false;
         const pe = p.inCar || p;
         if (dist(probeX, probeY, pe.x, pe.y) < 34) blockedByPlayer = true;
-        if (!blockedByPlayer) car.followRoad(dt, 14);
+        if (!blockedByPlayer) car.followRoad(dt);
         else { car.vx = 0; car.vy = 0; }
       }
     }
@@ -486,20 +489,15 @@ const Game = {
       return;
     }
     if (type === 'taxi') {
-      let target = null;
-      for (let i = 0; i < 20; i++) {
-        const cand = choice(World.intersections);
-        if (dist(cand.x, cand.y, p.x, p.y) > 1400) { target = cand; break; }
-      }
-      if (!target) target = choice(World.intersections);
+      let target = World.randomRoadPointFar(p.x, p.y, 1400);
       const d = dist(p.x, p.y, target.x, target.y);
       this.mission = { type, target, t: d / 240 * 1.7 + 20, reward: Math.round(130 + d / 12) };
       this.toast('TAXI: Fahrgast ans Ziel bringen!');
     } else if (type === 'pakete') {
       const pkgs = [];
       for (let i = 0; i < 5; i++) {
-        const it = choice(World.intersections);
-        pkgs.push({ x: it.x + rand(-30, 30), y: it.y + rand(-30, 30), taken: false });
+        const it = World.randomRoadPointNear(p.x, p.y, 1700);
+        pkgs.push({ x: it.x + rand(-25, 25), y: it.y + rand(-25, 25), taken: false });
       }
       this.mission = { type, packages: pkgs, t: 150, reward: 230 };
       this.toast('PAKETE: 5 Pakete einsammeln!');
@@ -610,8 +608,7 @@ const Game = {
     if (night > 0.3) {
       g.setTransform(z, 0, 0, z, vw / 2 - this.cam.x * z, vh / 2 - this.cam.y * z);
       g.globalCompositeOperation = 'lighter';
-      for (const it of World.intersections) {
-        if (it.y === CFG.B38_Y) continue;
+      for (const it of World.lampNodes) {
         const gr = g.createRadialGradient(it.x, it.y, 4, it.x, it.y, 90);
         gr.addColorStop(0, 'rgba(255,220,140,' + (0.20 * night).toFixed(3) + ')');
         gr.addColorStop(1, 'rgba(255,220,140,0)');
@@ -628,14 +625,6 @@ const Game = {
         g.fillStyle = gr;
         g.beginPath(); g.arc(hx, hy, 150, 0, 7); g.fill();
       }
-      for (const n of World.neons) {
-        g.font = 'bold 13px Verdana, sans-serif';
-        g.textAlign = 'center';
-        g.shadowColor = n.color;
-        g.shadowBlur = 18 * night;
-        g.fillStyle = n.color;
-        g.fillText(n.text, n.x, n.y);
-      }
       g.shadowBlur = 0;
       g.globalCompositeOperation = 'source-over';
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -649,7 +638,7 @@ const Game = {
   drawOverlays(g) {
     const vw = this.vw, vh = this.vh;
     if (this.state === 'title') this.drawTitle(g);
-    if (this.state === 'wasted') this.drawDeath(g, 'WASTED', 'rgba(140,10,10,0.55)', 'R = Wiederbeleben im Klinikum');
+    if (this.state === 'wasted') this.drawDeath(g, 'WASTED', 'rgba(140,10,10,0.55)', 'R = Wiederbelebung beim Arzt');
     if (this.state === 'busted') this.drawDeath(g, 'BUSTED', 'rgba(10,40,140,0.55)', 'R = Wieder freilassen (20% Strafe)');
     if (this.paused && this.state === 'play') {
       g.fillStyle = 'rgba(0,0,0,0.55)';
@@ -860,11 +849,23 @@ const Game = {
     const ox = vw - 202, oy = 12;
     g.fillStyle = 'rgba(0,0,0,0.55)';
     g.fillRect(ox - 3, oy - 3, 196, 196);
-    g.fillStyle = '#274a24';
-    g.fillRect(ox, oy, World.W * s, 250 * s);
-    g.fillStyle = '#3a3d42';
-    for (const x of CFG.ROAD_X) g.fillRect(ox + x * s - 1.5, oy, 3, 190);
-    for (const y of CFG.ROAD_Y) g.fillRect(ox, oy + y * s - 1.5, 190, 3);
+    for (const gn of World.greens) {
+      g.fillStyle = gn.kind === 'forest' ? '#274a24' : gn.kind === 'cemetery' ? '#3a4438' : '#3f5a2e';
+      g.beginPath();
+      g.moveTo(ox + gn.pts[0][0] * s, oy + gn.pts[0][1] * s);
+      for (let i = 1; i < gn.pts.length; i++) g.lineTo(ox + gn.pts[i][0] * s, oy + gn.pts[i][1] * s);
+      g.closePath();
+      g.fill();
+    }
+    g.strokeStyle = '#4a4d53';
+    g.lineCap = 'round';
+    for (const w of World.roadWays) {
+      g.lineWidth = Math.max(1.5, w.width * s);
+      g.beginPath();
+      g.moveTo(ox + w.pts[0][0] * s, oy + w.pts[0][1] * s);
+      for (let i = 1; i < w.pts.length; i++) g.lineTo(ox + w.pts[i][0] * s, oy + w.pts[i][1] * s);
+      g.stroke();
+    }
     const dot = (x, y, c, r) => {
       g.fillStyle = c;
       g.beginPath(); g.arc(ox + x * s, oy + y * s, r, 0, 7); g.fill();

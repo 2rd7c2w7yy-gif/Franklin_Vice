@@ -82,18 +82,23 @@ const Render3D = {
     ground.position.set(W / 2, 0, H / 2);
     this.scene.add(ground);
 
-    this.facadeTexs = [this.makeFacadeTexture(0), this.makeFacadeTexture(1)];
+    this.facadeTex = this.makeFacadeTexture(0);
+    this.facadeTex.wrapS = this.facadeTex.wrapT = THREE.RepeatWrapping;
+    this.facadeTex.repeat.set(1 / 52, 1 / 52);
     for (const b of World.buildings) {
-      const h3 = 24 + ((b.x * 31 + b.y * 17) % 52);
-      const tint = new THREE.Color(b.color || '#9aa0a8');
-      const ftex = this.facadeTexs[(b.x + b.y) % 2].clone();
-      ftex.needsUpdate = true;
-      ftex.repeat.set(Math.max(1, Math.round(b.w / 52)), Math.max(1, Math.round(h3 / 52)));
-      const sideMat = new THREE.MeshLambertMaterial({ map: ftex, color: tint });
-      const roofMat = new THREE.MeshLambertMaterial({ color: tint.clone().multiplyScalar(0.6) });
-      const box = new THREE.Mesh(new THREE.BoxGeometry(b.w, h3, b.h), [sideMat, sideMat, roofMat, roofMat, sideMat, sideMat]);
-      box.position.set(b.x + b.w / 2, h3 / 2, b.y + b.h / 2);
-      this.scene.add(box);
+      const shape = new THREE.Shape();
+      b.pts.forEach(([x, y], i) => {
+        if (i === 0) shape.moveTo(x, -y);
+        else shape.lineTo(x, -y);
+      });
+      const h3 = 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48);
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: h3, bevelEnabled: false, curveSegments: 2 });
+      geo.rotateX(-Math.PI / 2);
+      const tint = new THREE.Color(b.color);
+      const sideMat = new THREE.MeshLambertMaterial({ map: this.facadeTex, color: tint });
+      const capMat = new THREE.MeshLambertMaterial({ color: tint.clone().multiplyScalar(0.6) });
+      const mesh = new THREE.Mesh(geo, [sideMat, capMat]);
+      this.scene.add(mesh);
     }
 
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2f });
@@ -116,9 +121,10 @@ const Render3D = {
     const poleMat = new THREE.MeshLambertMaterial({ color: 0x555a62 });
     const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffe9a8 });
     const glowTex = this.radialTexture('rgba(255,225,150,1)', 'rgba(255,225,150,0)');
-    for (const it of World.intersections) {
-      const px = it.x + CFG.ROAD_HALF + 9;
-      const pz = it.y + CFG.ROAD_HALF + 9;
+    const lamps = World.lampNodes.slice(0, 70);
+    for (const it of lamps) {
+      const px = it.x;
+      const pz = it.y;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 26, 6), poleMat);
       pole.position.set(px, 13, pz);
       this.scene.add(pole);
@@ -132,24 +138,46 @@ const Render3D = {
       this.lampGlows.push(glow);
     }
 
-    for (const n of World.neons) {
+    const neonBuildings = [];
+    for (let i = 0; i < 16 && World.buildings.length; i++) {
+      neonBuildings.push(World.buildings[(Math.random() * World.buildings.length) | 0]);
+    }
+    for (const b of neonBuildings) {
+      const rp = this.nearestRoadWorld(b.cx, b.cy);
+      if (!rp) continue;
+      const a = Math.atan2(rp[1] - b.cy, rp[0] - b.cx);
+      const nx = b.cx + Math.cos(a) * 34;
+      const nz = b.cy + Math.sin(a) * 34;
+      const text = CFG.NEON_TEXTS[(Math.random() * CFG.NEON_TEXTS.length) | 0];
+      const col = CFG.NEON_COLORS[(Math.random() * CFG.NEON_COLORS.length) | 0];
       const c = document.createElement('canvas');
       c.width = 256; c.height = 64;
       const g = c.getContext('2d');
       g.font = 'bold 34px Verdana, sans-serif';
       g.textAlign = 'center';
       g.textBaseline = 'middle';
-      g.shadowColor = n.color;
+      g.shadowColor = col;
       g.shadowBlur = 22;
-      g.fillStyle = n.color;
-      g.fillText(n.text, 128, 32);
-      g.fillText(n.text, 128, 32);
+      g.fillStyle = col;
+      g.fillText(text, 128, 32);
+      g.fillText(text, 128, 32);
       const tex = new THREE.CanvasTexture(c);
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-      spr.scale.set(72, 18, 1);
-      spr.position.set(n.x, 20, n.y);
+      spr.scale.set(64, 16, 1);
+      spr.position.set(nx, 22, nz);
       this.scene.add(spr);
     }
+  },
+
+  nearestRoadWorld(x, y) {
+    let bd = Infinity, bp = null;
+    for (const w of World.roadWays) {
+      for (const p of w.pts) {
+        const d = (p[0] - x) * (p[0] - x) + (p[1] - y) * (p[1] - y);
+        if (d < bd) { bd = d; bp = p; }
+      }
+    }
+    return bp;
   },
 
   makeFacadeTexture(variant) {
