@@ -40,8 +40,14 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 ## Features
 
 - Offene Welt (3600×3600 px) mit der **echten Straßenkarte von Mannheim-Käfertal/Franklin**
-  aus OpenStreetMap — Straßenverläufe inkl. Kurven, B 38 / A 6, Käfertaler Wald, Friedhof,
-  Wasserturm, Bahnhof Käfertal und ~660 echte Gebäude-Grundrisse (kein Planquadrat-Raster).
+  aus OpenStreetMap — Straßenverläufe inkl. Kurven, B 38 / A 6, **Franklin Loop** (Rundweg durch
+  die Grünflächen, an echte Straßenknoten angebunden), **Straßenbahn/OEG als Schienen** mit
+  Haltestellen, Fuß-/Radwege als offizielle Wege, Käfertaler Wald, Friedhof, Wasserturm,
+  Bahnhof Käfertal und ~1.400 echte Gebäude-Grundrisse (kein Planquadrat-Raster).
+- **Nur offizielle Wege**: Spieler (zu Fuß und im Auto) kann Fahrbahn/Gehwege nicht verlassen;
+  Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn weggetrimmt;
+  Straßenschilder werden nicht mehr spiegelverkehrt gerendert (Drehrichtung wird korrigiert).
+- **Lastenräder** fahren als eigener Verkehr auf Wegen und Nebenstraßen (2D-Icon + 3D-Modell).
   Verkehr und Fußgänger folgen dem echten Straßennetz als Graph.
   *Kartendaten: © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/1-0/),
   über die OSM-API abgerufen und in `js/geodata.js` eingebettet.*
