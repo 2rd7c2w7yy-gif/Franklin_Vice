@@ -22,7 +22,8 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 
 | Taste | Aktion |
 | --- | --- |
-| `WASD` / Pfeiltasten | Laufen / Fahren |
+| `WASD` / Pfeiltasten | Laufen / Fahren (Pfeile: vorwärts/rückwärts/rechts/links; die Figur dreht sich bei Richtungswechsel in **10°-Schritten**) |
+| beliebige Taste | Titel-Screen starten |
 | Maus | Zielen (Schussrichtung folgt dem Fadenkreuz) |
 | rechte Maustaste ziehen | Kamera um den Spieler drehen (nur 3D) |
 | `E` | Auto klauen / aussteigen, Mission am gelben Marker starten |
@@ -32,7 +33,8 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 | `P` | Pause |
 | `M` | Ton an/aus |
 | `R` | Nach WASTED / BUSTED neu starten |
-| `Enter` | Spiel starten |
+| `Enter` | Spiel starten (alternativ beliebige Bewegungs-Taste) |
+| URL-Parameter `?mode=2d` | erzwingt 2D-Modus (z. B. bei WebGL-Problemen) |
 
 ## Features
 

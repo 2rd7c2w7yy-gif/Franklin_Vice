@@ -68,14 +68,25 @@ const Game = {
     if (!window.__TEST__) {
       try { Render3D.init(); } catch (e) { Render3D.available = false; }
     }
+    if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('mode') === '2d') Render3D.available = false;
     this.setMode(Render3D.available ? '3d' : '2d', true);
     if (window.__TEST__) return;
     let last = performance.now();
     const loop = (t) => {
       const dt = clamp((t - last) / 1000, 0, 0.05);
       last = t;
-      if (this.state === 'play' && !this.paused) this.update(dt);
-      this.render();
+      try {
+        if (this.state === 'play' && !this.paused) this.update(dt);
+        this.render();
+      } catch (err) {
+        this._errCount = (this._errCount || 0) + 1;
+        if (!this._errLogged) { this._errLogged = true; if (typeof console !== 'undefined') console.error(err); }
+        if (this.mode === '3d' && this._errCount > 5) {
+          Render3D.available = false;
+          this.setMode('2d');
+          this.toast('3D-Renderfehler — automatischer Fallback auf 2D (?mode=2d erzwingt 2D)');
+        }
+      }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
@@ -122,7 +133,10 @@ const Game = {
     if (down && !e.repeat) {
       SFX.init();
       SFX.ensure();
-      if (c === 'Enter' && this.state === 'title') { this.state = 'play'; this.toast('Willkommen in FRANKLIN! Finde den gelben Marker.'); }
+      if (this.state === 'title' && (c === 'Enter' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyF'].includes(c))) {
+        this.state = 'play';
+        this.toast('Willkommen in FRANKLIN! Finde den gelben Marker.');
+      }
       if (c === 'KeyR' && (this.state === 'wasted' || this.state === 'busted')) this.respawn();
       if (c === 'KeyP' && this.state === 'play') this.paused = !this.paused;
       if (c === 'KeyM') this.toast(SFX.toggleMute() ? 'Ton aus' : 'Ton an');
@@ -205,9 +219,14 @@ const Game = {
       const iv = this.inputVector();
       const moving = iv.x !== 0 || iv.y !== 0;
       if (moving) {
-        p.angle = Math.atan2(iv.y, iv.x);
-        p.vx += iv.x * CFG.PLAYER_ACCEL * dt;
-        p.vy += iv.y * CFG.PLAYER_ACCEL * dt;
+        const step = Math.PI / 18;
+        const target = Math.round(Math.atan2(iv.y, iv.x) / step) * step;
+        const diff = angleDiff(target, p.angle);
+        const turn = step * Math.max(1, Math.round(6 * dt / step));
+        if (Math.abs(diff) <= turn) p.angle = target;
+        else p.angle = Math.round((p.angle + Math.sign(diff) * turn) / step) * step;
+        p.vx += Math.cos(p.angle) * CFG.PLAYER_ACCEL * dt;
+        p.vy += Math.sin(p.angle) * CFG.PLAYER_ACCEL * dt;
       }
       const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       const max = CFG.PLAYER_SPEED;
@@ -920,7 +939,7 @@ const Game = {
     if (Math.floor(this.time * 1.6) % 2 === 0 || this.time < 0.1) {
       g.font = 'bold 26px Verdana, sans-serif';
       g.fillStyle = '#ffe63c';
-      g.fillText('▶ ENTER drücken zum Spielen ◀', vw / 2, vh / 2 + 140);
+      g.fillText('▶ Beliebige Taste drücken zum Spielen ◀', vw / 2, vh / 2 + 140);
     }
     g.font = '13px Verdana, sans-serif';
     g.fillStyle = 'rgba(255,255,255,0.75)';
