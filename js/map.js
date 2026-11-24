@@ -93,7 +93,9 @@ const World = {
     this.mPerDegLat = 110540;
     const wM = (this.bbox[2] - this.bbox[0]) * this.mPerDegLon;
     const hM = (this.bbox[3] - this.bbox[1]) * this.mPerDegLat;
-    this.s = (this.W - 2 * this.PAD) / Math.max(wM, hM);
+    this.s = 0.92;
+    this.W = Math.round(wM * this.s) + 2 * this.PAD;
+    this.H = Math.round(hM * this.s) + 2 * this.PAD;
 
     for (const rw of GEO.roads) {
       const pts = rw.p.map(([lon, lat]) => {

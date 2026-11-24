@@ -305,8 +305,10 @@ const Game = {
     if (p.stars === 0 && this.police.length) this.police = [];
     this.sirenNear = false;
     for (const pc of this.police) {
+      const pox = pc.x, poy = pc.y;
       const res = pc.chase(dt, p.inCar || p, 14);
       const impact = pc.collideWorld();
+      if (!World.onRoadOrWalk(pc.x, pc.y)) { pc.x = pox; pc.y = poy; pc.vx = 0; pc.vy = 0; }
       if (impact > 260) { SFX.crash(impact); sparkBurst(pc.x, pc.y, 8); pc.health -= impact / 70; if (pc.health <= 0) { this.explodeCar(pc); this.addCrime(3); } }
       if (res && res.fire) {
         const tgt = p.inCar || p;
@@ -356,6 +358,12 @@ const Game = {
           }
         }
       }
+    }
+
+    if (p.inCar && !World.onRoadOrWalk(p.inCar.x, p.inCar.y)) {
+      const sp = World.snapToRoad(p.inCar.x, p.inCar.y);
+      p.inCar.x = sp.x; p.inCar.y = sp.y;
+      p.x = sp.x; p.y = sp.y;
     }
 
     if (p.inCar) {

@@ -149,8 +149,9 @@ class Ped {
     if (this.state === 'flee') {
       this.fleeT -= dt;
       const a = Math.atan2(this.y - this.fleeY, this.x - this.fleeX);
-      this.x += Math.cos(a) * 175 * dt;
-      this.y += Math.sin(a) * 175 * dt;
+      const nx = this.x + Math.cos(a) * 175 * dt;
+      const ny = this.y + Math.sin(a) * 175 * dt;
+      if (World.onRoadOrWalk(nx, ny)) { this.x = nx; this.y = ny; }
       this.angle = a;
       if (this.fleeT <= 0) this.state = 'walk';
     } else {
