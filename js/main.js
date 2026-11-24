@@ -251,7 +251,11 @@ const Game = {
       const ny = p.y + p.vy * dt;
       if (World.onRoadOrWalk(nx, ny)) { p.x = nx; p.y = ny; } else { p.vx = 0; p.vy = 0; }
       const hit = World.collideCircle(p.x, p.y, p.r);
-      if (hit) { p.x += hit.x; p.y += hit.y; p.vx *= 0.2; p.vy *= 0.2; }
+      if (hit) {
+        const hx = p.x + hit.x, hy = p.y + hit.y;
+        if (World.onRoadOrWalk(hx, hy)) { p.x = hx; p.y = hy; p.vx *= 0.2; p.vy *= 0.2; }
+        else { p.vx = 0; p.vy = 0; }
+      }
     }
 
     if ((this.keys.KeyF || this.mouse.down) && p.fireCd <= 0) this.playerShoot();

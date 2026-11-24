@@ -16,7 +16,7 @@ class Car {
   constructor(x, y, angle, opts) {
     opts = opts || {};
     this.x = x; this.y = y; this.angle = angle;
-    this.w = 48; this.h = 24; this.r = 21;
+    this.w = 48; this.h = 24; this.r = 21; this.colR = 14;
     this.vx = 0; this.vy = 0;
     this.health = 100;
     this.type = opts.type || 'civil';
@@ -116,7 +116,7 @@ class Car {
   }
 
   collideWorld() {
-    const hit = World.collideCircle(this.x, this.y, this.r);
+    const hit = World.collideCircle(this.x, this.y, this.colR || this.r);
     if (!hit) return 0;
     this.x += hit.x; this.y += hit.y;
     const vn = this.vx * hit.nx + this.vy * hit.ny;

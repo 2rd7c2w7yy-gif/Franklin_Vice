@@ -138,7 +138,8 @@ const World = {
       const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
       pts = this.trimToClearance(pts, -6);
-      const cpts = this.trimToClearance(pts, 8, this.mainSet);
+      let cpts = this.trimToClearance(this.trimToClearance(pts, 4, this.mainSet), -2);
+      if (cpts.length && this.roadClearance(cpts) < -2) cpts = [];
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       const col = CFG.PALETTE.building[Math.abs((cx * 13 + cy * 7) | 0) % CFG.PALETTE.building.length];
@@ -223,6 +224,7 @@ const World = {
     };
     this.buildings.forEach((b, i) => {
       const cpts = b.cpts || b.pts;
+      if (!cpts.length) return;
       const xs = cpts.map(p => p[0]), ys = cpts.map(p => p[1]);
       put(i, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), false);
     });
