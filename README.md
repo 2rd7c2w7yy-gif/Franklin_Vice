@@ -57,7 +57,9 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto), **alle KI-Figuren, Autos, Lastenräder und
   die Polizei** bewegen sich ausschließlich auf Wegen — der begehbare Korridor endet am
   Fahrbahnrand; die Figur startet und respawnt per Snap auf einem echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn
-  weggetrimmt. Straßennamen werden nie spiegelverkehrt gerendert: In 2D sorgt die Drehrichtungs-
+  weggetrimmt. **Bäume stehen nie auf Wegen**: bei der Platzierung im Wald/Park wird ein
+  Mindestabstand (Baumradius + 5 px) zu jedem Weg und jeder Schiene erzwungen.
+  Straßennamen werden nie spiegelverkehrt gerendert: In 2D sorgt die Drehrichtungs-
   Korrektur (Drehung nur um die Straßenrichtung, ggf. +180°) für lesbare Schilder; in 3D ist die
   Bodentextur korrekt (flipY) auf die Weltkoordinaten abgebildet, sodass Namen nicht gespiegelt
   erscheinen.

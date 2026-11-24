@@ -173,17 +173,25 @@ const World = {
       this.buildings.push({ pts, cpts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes' });
     }
 
-    let treeBudget = 320;
+    let treeBudget = 420;
     for (const gn of this.greens) {
       if (gn.kind !== 'forest' && gn.kind !== 'park') continue;
       const xs = gn.pts.map(p => p[0]), ys = gn.pts.map(p => p[1]);
       const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       const area = (x1 - x0) * (y1 - y0);
-      const want = gn.kind === 'forest' ? clamp(Math.round(area / 2600), 12, 90) : clamp(Math.round(area / 9000), 3, 12);
+      const want = gn.kind === 'forest' ? clamp(Math.round(area / 800), 12, 140) : clamp(Math.round(area / 9000), 3, 12);
       for (let i = 0; i < want && treeBudget > 0; i++) {
         const x = x0 + Math.random() * (x1 - x0), y = y0 + Math.random() * (y1 - y0);
         if (!this.pointInPoly(x, y, gn.pts)) continue;
-        this.trees.push({ x, y, r: 9 + Math.random() * 7 });
+        const tr = 9 + Math.random() * 7;
+        let minCl = Infinity;
+        for (const s of this.segsNear(x, y, 70)) {
+          const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
+          const cl = c.d - s.w / 2;
+          if (cl < minCl) minCl = cl;
+        }
+        if (minCl < tr + 5) continue;
+        this.trees.push({ x, y, r: tr });
         treeBudget--;
       }
     }
