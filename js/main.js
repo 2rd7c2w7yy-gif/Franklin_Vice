@@ -216,17 +216,23 @@ const Game = {
         if (car.health <= 0) this.explodeCar(car);
       }
     } else {
-      const iv = this.inputVector();
-      const moving = iv.x !== 0 || iv.y !== 0;
-      if (moving) {
-        const step = Math.PI / 18;
-        const target = Math.round(Math.atan2(iv.y, iv.x) / step) * step;
-        const diff = angleDiff(target, p.angle);
-        const turn = step * Math.max(1, Math.round(6 * dt / step));
-        if (Math.abs(diff) <= turn) p.angle = target;
-        else p.angle = Math.round((p.angle + Math.sign(diff) * turn) / step) * step;
-        p.vx += Math.cos(p.angle) * CFG.PLAYER_ACCEL * dt;
-        p.vy += Math.sin(p.angle) * CFG.PLAYER_ACCEL * dt;
+      const fwd = (this.keys.KeyW || this.keys.ArrowUp) ? 1 : (this.keys.KeyS || this.keys.ArrowDown) ? -1 : 0;
+      const turnIn = (this.keys.KeyA || this.keys.ArrowLeft) ? -1 : (this.keys.KeyD || this.keys.ArrowRight) ? 1 : 0;
+      const step = Math.PI / 18;
+      if (turnIn !== 0) {
+        p.turnAcc = (p.turnAcc || 0) + turnIn * Math.PI * dt;
+        const steps = Math.floor(Math.abs(p.turnAcc) / step);
+        if (steps > 0) {
+          p.angle = Math.round((p.angle + Math.sign(p.turnAcc) * steps * step) / step) * step;
+          p.turnAcc -= Math.sign(p.turnAcc) * steps * step;
+        }
+      } else {
+        p.turnAcc = 0;
+      }
+      if (fwd !== 0) {
+        const acc = CFG.PLAYER_ACCEL * (fwd < 0 ? 0.6 : 1);
+        p.vx += Math.cos(p.angle) * acc * fwd * dt;
+        p.vy += Math.sin(p.angle) * acc * fwd * dt;
       }
       const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       const max = CFG.PLAYER_SPEED;
@@ -515,8 +521,13 @@ const Game = {
     } else if (type === 'pakete') {
       const pkgs = [];
       for (let i = 0; i < 5; i++) {
-        const it = World.randomRoadPointNear(p.x, p.y, 1700);
-        pkgs.push({ x: it.x + rand(-25, 25), y: it.y + rand(-25, 25), taken: false });
+        let px = 0, py = 0, tries = 0;
+        do {
+          const it = World.randomRoadPointNear(p.x, p.y, 1700);
+          px = it.x + rand(-12, 12);
+          py = it.y + rand(-12, 12);
+        } while (World.blocked(px, py, 10) && ++tries < 8);
+        pkgs.push({ x: px, y: py, taken: false });
       }
       this.mission = { type, packages: pkgs, t: 150, reward: 230 };
       this.toast('PAKETE: 5 Pakete einsammeln!');
@@ -844,7 +855,7 @@ const Game = {
       g.textAlign = 'left';
       g.font = '13px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,255,255,' + clamp(25 - this.hintT, 0, 1) * 0.75 + ')';
-      g.fillText('WASD/Pfeile = fahren · Maus = zielen · F/Klick = schießen · E = ein-/aussteigen, Mission · Leertaste = Handbremse · 2/3 = 2D/3D · rechte Maustaste = Kamera (3D) · P = Pause · M = Ton', 16, vh - 16);
+      g.fillText('↑/↓(W/S) = vorwärts/rückwärts · ←/→(A/D) = Figur drehen in 10°-Schritten · im Auto lenken ←/→ · Maus = zielen · F/Klick = schießen · E = Auto/Mission · Leertaste = Handbremse · 2/3 = 2D/3D · P = Pause · M = Ton', 16, vh - 16);
     }
 
     g.textAlign = 'center';
@@ -930,7 +941,7 @@ const Game = {
     g.fillText('Mannheim-Käfertal · Benjamin Franklin Village', vw / 2, vh / 2 - 66);
     g.font = '17px Verdana, sans-serif';
     const lines = [
-      'WASD / Pfeile = bewegen · E = Auto/Mission · Leertaste = Handbremse',
+      '↑/↓ = vorwärts/rückwärts · ←/→ = Figur drehen (10°-Schritte) · E = Auto/Mission · Leertaste = Handbremse',
       'Maus = zielen · F oder Klick = schießen · rechte Maustaste ziehen = Kamera drehen (3D) · P = Pause · M = Ton',
       'Gelbe Marker = Missionen (Taxi, Pakete, Wald-Sprint)',
       '2 = 2D-Top-Down · 3 = 3D (Third-Person) — Vorsicht: ★ bei Verbrechen → WASTED / BUSTED!'

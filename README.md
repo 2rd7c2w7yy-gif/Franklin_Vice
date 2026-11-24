@@ -22,7 +22,8 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 
 | Taste | Aktion |
 | --- | --- |
-| `WASD` / Pfeiltasten | Laufen / Fahren (Pfeile: vorwärts/rückwärts/rechts/links; die Figur dreht sich bei Richtungswechsel in **10°-Schritten**) |
+| `↑` / `↓` (W/S) | Figur vorwärts / rückwärts bewegen (in Blickrichtung) |
+| `←` / `→` (A/D) | Figur **drehen** — nur in **10°-Schritten** (Tank-Steuerung); im Auto: lenken |
 | beliebige Taste | Titel-Screen starten |
 | Maus | Zielen (Schussrichtung folgt dem Fadenkreuz) |
 | rechte Maustaste ziehen | Kamera um den Spieler drehen (nur 3D) |
