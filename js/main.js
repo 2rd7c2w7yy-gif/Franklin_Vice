@@ -63,6 +63,9 @@ const Game = {
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
+    const sp0 = World.snapToRoad(this.player.x, this.player.y);
+    this.player.x = sp0.x;
+    this.player.y = sp0.y;
     this.spawnInitial();
     this.cam.x = this.player.x;
     this.cam.y = this.player.y;
@@ -515,8 +518,9 @@ const Game = {
 
   respawn() {
     const p = this.player;
-    p.x = World.respawn.x;
-    p.y = World.respawn.y;
+    const sp = World.snapToRoad(World.respawn.x, World.respawn.y);
+    p.x = sp.x;
+    p.y = sp.y;
     p.vx = 0; p.vy = 0;
     p.health = 100;
     p.stars = 0;

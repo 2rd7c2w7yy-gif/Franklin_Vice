@@ -333,7 +333,7 @@ const World = {
   onRoadOrWalk(x, y) {
     if (x < 4 || y < 4 || x > this.W - 4 || y > this.H - 4) return false;
     for (const s of this.segsNear(x, y, 60)) {
-      if (this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 12) return true;
+      if (this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 6) return true;
     }
     return false;
   },

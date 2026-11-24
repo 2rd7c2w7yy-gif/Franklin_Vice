@@ -52,9 +52,13 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   OSM kartiert — die neue Linie 16 ist dort derzeit nicht erfasst) liegt als eigenes Schienennetz
   im Spiel; darauf fährt eine **echte Straßenbahn** (pendelt entlang der Strecke,
   2D + 3D-Modell mit Stromabnehmer und Scheinwerfern).
-- **Nur offizielle Wege**: Spieler (zu Fuß und im Auto) kann Fahrbahn/Gehwege nicht verlassen;
-  Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn weggetrimmt;
-  Straßenschilder werden nicht mehr spiegelverkehrt gerendert (Drehrichtung wird korrigiert).
+- **Nur offizielle Wege**: Spieler (zu Fuß und im Auto) kann Fahrbahn/Gehwege nicht verlassen —
+  der begehbare Korridor endet am Fahrbahnrand; die Figur startet und respawnt per Snap auf einem
+  echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn
+  weggetrimmt. Straßennamen werden nie spiegelverkehrt gerendert: In 2D sorgt die Drehrichtungs-
+  Korrektur (Drehung nur um die Straßenrichtung, ggf. +180°) für lesbare Schilder; in 3D ist die
+  Bodentextur korrekt (flipY) auf die Weltkoordinaten abgebildet, sodass Namen nicht gespiegelt
+  erscheinen.
 - **Lastenräder** fahren als eigener Verkehr auf Wegen und Nebenstraßen (2D-Icon + 3D-Modell).
   Verkehr und Fußgänger folgen dem echten Straßennetz als Graph.
   *Kartendaten: © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/1-0/),

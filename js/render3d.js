@@ -67,7 +67,7 @@ const Render3D = {
 
   groundTexture() {
     const tex = new THREE.CanvasTexture(World.canvas);
-    tex.flipY = false;
+    tex.flipY = true;
     tex.anisotropy = 4;
     if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
     else tex.encoding = THREE.sRGBEncoding;
