@@ -27,6 +27,7 @@ const Game = {
   mode: '2d',
   lastDt: 0.016,
   glCanvas: null,
+  nearPhoto: null,
 
   init() {
     this.canvas = document.getElementById('game');
@@ -62,6 +63,7 @@ const Game = {
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
     this.spawnInitial();
+    if (typeof Photos !== 'undefined') Photos.load();
     this.cam.x = this.player.x;
     this.cam.y = this.player.y;
     this.glCanvas = document.getElementById('gl');
@@ -240,6 +242,7 @@ const Game = {
     }
 
     if ((this.keys.KeyF || this.mouse.down) && p.fireCd <= 0) this.playerShoot();
+    this.nearPhoto = (typeof Photos !== 'undefined' && typeof PHOTODATA !== 'undefined' && PHOTODATA.length) ? Photos.nearest(p.x, p.y, 150) : null;
 
     for (const car of this.cars) {
       if (car.dead) continue;
@@ -592,6 +595,7 @@ const Game = {
       this.drawHUD(g);
       this.drawMinimap(g);
       this.drawOverlays(g);
+      this.drawPhotoOverlay(g);
       return;
     }
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -603,6 +607,7 @@ const Game = {
     g.setTransform(z, 0, 0, z, vw / 2 - this.cam.x * z + shx, vh / 2 - this.cam.y * z + shy);
     g.drawImage(World.canvas, 0, 0);
     this.drawMarkers(g);
+    this.drawPhotoMarkers(g);
     const drawables = [];
     for (const ped of this.peds) if (!ped.dead) drawables.push({ y: ped.y, f: () => this.drawPed(g, ped) });
     for (const car of this.cars) if (!car.dead) drawables.push({ y: car.y, f: () => this.drawCar(g, car) });
@@ -652,6 +657,39 @@ const Game = {
     this.drawHUD(g);
     this.drawMinimap(g);
     this.drawOverlays(g);
+    this.drawPhotoOverlay(g);
+  },
+
+  drawPhotoMarkers(g) {
+    if (typeof PHOTODATA === 'undefined') return;
+    for (const p of PHOTODATA) {
+      g.fillStyle = '#9ecbff';
+      g.strokeStyle = '#0b2a4a';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(p.x, p.y, 9, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#0b2a4a';
+      g.beginPath(); g.arc(p.x, p.y, 3.5, 0, 7); g.fill();
+    }
+  },
+
+  drawPhotoOverlay(g) {
+    const np = this.nearPhoto;
+    if (!np || !np.loaded || typeof Photos === 'undefined') return;
+    const img = Photos.imgs[np.f];
+    if (!img) return;
+    const vw = this.vw, vh = this.vh;
+    const w = Math.min(360, vw * 0.4), h = w * 0.72;
+    const x = (vw - w) / 2, y = vh - h - 56;
+    g.fillStyle = 'rgba(0,0,0,0.78)';
+    g.fillRect(x - 8, y - 30, w + 16, h + 44);
+    g.drawImage(img, x, y, w, h);
+    g.strokeStyle = '#9ecbff';
+    g.lineWidth = 2;
+    g.strokeRect(x - 8, y - 30, w + 16, h + 44);
+    g.fillStyle = '#fff';
+    g.font = 'bold 14px Verdana, sans-serif';
+    g.textAlign = 'center';
+    g.fillText('Foto: ' + np.f + (np.b >= 0 ? '  (Haus zugeordnet)' : ''), vw / 2, y - 10);
   },
 
   drawOverlays(g) {
@@ -896,6 +934,7 @@ const Game = {
       dot(this.mission.target.x, this.mission.target.y, '#50ff78', 4 + Math.sin(this.time * 6));
     }
     for (const pc of this.police) dot(pc.x, pc.y, '#ff4040', 3);
+    if (typeof PHOTODATA !== 'undefined') for (const p of PHOTODATA) dot(p.x, p.y, '#9ecbff', 2.5);
     const p = this.player;
     g.save();
     g.translate(ox + p.x * s, oy + p.y * s);

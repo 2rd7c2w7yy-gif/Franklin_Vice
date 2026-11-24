@@ -65,6 +65,19 @@ oder **KartaView** sowie **Wikimedia Commons** — wer eigene, passend lizenzier
 sie gern ins Repo legen (`textures/`); auf Wunsch baue ich eine Manifest-Anbindung dafür ein.
 Aktuell ist die Grafik komplett prozedural und damit lizenzfrei.
 
+## Eigene Fotos aus Franklin einbinden (GPS/EXIF)
+
+Ja — Fotos mit GPS-Metadaten lassen sich exakt auf der Karte platzieren:
+
+1. Smartphone-Fotos (JPEG mit EXIF-GPS) nach `photos/` legen (nur eigene/lizenzierte Fotos!)
+2. `node tools/build_photos.js` ausführen — liest GPS-Koordinaten + Aufnahmerichtung
+   (EXIF), projiziert sie auf die OSM-Karte, matched das nächstgelegene Gebäude und
+   schreibt `js/photodata.js`
+3. `photos/` + `js/photodata.js` committen/pushen
+
+Im Spiel: Kamera-Marker auf Karte & Minimap, 3D-Billboard an der GPS-Position,
+großes Foto-Overlay beim Näherkommen (siehe `photos/README.md`).
+
 ## Technik
 
 HTML5 Canvas (2D) + WebGL via **Three.js r149** (MIT-Lizenz, lokal vendored in

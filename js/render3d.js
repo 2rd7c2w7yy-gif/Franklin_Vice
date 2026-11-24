@@ -167,6 +167,37 @@ const Render3D = {
       spr.position.set(nx, 22, nz);
       this.scene.add(spr);
     }
+    this.buildPhotoSprites();
+  },
+
+  buildPhotoSprites() {
+    this.photoSprites = [];
+    if (typeof PHOTODATA === 'undefined') return;
+    for (const p of PHOTODATA) {
+      const mat = new THREE.SpriteMaterial({ color: 0x9ecbff, transparent: true, opacity: 0.9 });
+      const spr = new THREE.Sprite(mat);
+      spr.scale.set(44, 32, 1);
+      spr.position.set(p.x, 30, p.y);
+      this.scene.add(spr);
+      p._spr = spr;
+      this.photoSprites.push(spr);
+    }
+  },
+
+  syncPhotoSprites() {
+    if (typeof PHOTODATA === 'undefined' || typeof Photos === 'undefined') return;
+    for (const p of PHOTODATA) {
+      if (p.loaded && !p._tex && Photos.imgs[p.f] && p._spr) {
+        p._tex = new THREE.Texture(Photos.imgs[p.f]);
+        if ('colorSpace' in p._tex) p._tex.colorSpace = THREE.SRGBColorSpace;
+        else p._tex.encoding = THREE.sRGBEncoding;
+        p._tex.needsUpdate = true;
+        p._spr.material.map = p._tex;
+        p._spr.material.color.set(0xffffff);
+        p._spr.material.needsUpdate = true;
+        p._spr.scale.set(60, 42, 1);
+      }
+    }
   },
 
   nearestRoadWorld(x, y) {
@@ -455,6 +486,7 @@ const Render3D = {
     if (!this.available) return;
     this.updateSky();
     this.syncEntities();
+    this.syncPhotoSprites();
     this.updateCamera(dt);
     this.renderer.render(this.scene, this.camera);
   }
