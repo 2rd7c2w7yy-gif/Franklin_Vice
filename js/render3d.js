@@ -8,6 +8,7 @@ const Render3D = {
   carMeshes: new Map(),
   pedMeshes: new Map(),
   bikeMeshes: new Map(),
+  tramMeshes: new Map(),
   playerMesh: null,
   marker: null,
   bulletPool: [],
@@ -379,6 +380,56 @@ const Render3D = {
     return grp;
   },
 
+  makeTramMesh(t) {
+    const grp = new THREE.Group();
+    const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(t.color) });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(88, 11, 24), bodyMat);
+    body.position.y = 9;
+    grp.add(body);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(78, 4.5, 24.4), new THREE.MeshLambertMaterial({ color: 0x16222e }));
+    win.position.set(-2, 11, 0);
+    grp.add(win);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(88, 1.8, 24), new THREE.MeshLambertMaterial({ color: 0x777777 }));
+    roof.position.y = 15.2;
+    grp.add(roof);
+    const panMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+    const pan = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 3.2), panMat);
+    pan.position.set(0, 17.6, 0);
+    grp.add(pan);
+    for (const px of [-7, 7]) {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(1.4, 3.4, 1.4), panMat);
+      arm.position.set(px, 16.2, 0);
+      grp.add(arm);
+    }
+    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x15181d });
+    for (const wx of [-30, -14, 14, 30]) {
+      for (const wz of [-9, 9]) {
+        const w = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 3, 10), wheelMat);
+        w.rotation.x = Math.PI / 2;
+        w.position.set(wx, 3.4, wz);
+        grp.add(w);
+      }
+    }
+    const hlMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8 });
+    for (const wz of [-8, 8]) {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3, 4), hlMat);
+      hl.position.set(44.2, 8, wz);
+      grp.add(hl);
+    }
+    const tlMat = new THREE.MeshBasicMaterial({ color: 0xff3b3b });
+    for (const wz of [-8, 8]) {
+      const tl = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3, 4), tlMat);
+      tl.position.set(-44.2, 8, wz);
+      grp.add(tl);
+    }
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(50, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.15;
+    grp.add(shadow);
+    this.scene.add(grp);
+    return grp;
+  },
+
   makePedMesh(ped) {
     const grp = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(3.4, 7, 4, 8), new THREE.MeshLambertMaterial({ color: new THREE.Color(ped.color) }));
@@ -429,6 +480,17 @@ const Render3D = {
     }
     for (const [b, m] of this.bikeMeshes) {
       if (!seenBikes.has(b)) { this.scene.remove(m); this.bikeMeshes.delete(b); }
+    }
+    const seenTrams = new Set();
+    for (const tr of Game.trams) {
+      seenTrams.add(tr);
+      let m = this.tramMeshes.get(tr);
+      if (!m) { m = this.makeTramMesh(tr); this.tramMeshes.set(tr, m); }
+      m.position.set(tr.x, 0, tr.y);
+      m.rotation.y = -tr.angle;
+    }
+    for (const [tr, m] of this.tramMeshes) {
+      if (!seenTrams.has(tr)) { this.scene.remove(m); this.tramMeshes.delete(tr); }
     }
     const seenPeds = new Set();
     for (const ped of Game.peds) {

@@ -24,6 +24,7 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 | --- | --- |
 | `↑` / `↓` (W/S) | Figur vorwärts / rückwärts bewegen (in Blickrichtung) |
 | `←` / `→` (A/D) | Figur **drehen** — nur in **10°-Schritten** (Tank-Steuerung); im Auto: lenken |
+| automatisch | Folgt die Figur beim Vorwärtslaufen einem kurvigen Weg, dreht sie **ohne weiteres Lenken** in 10°-Schritten der Kurve entlang |
 | beliebige Taste | Titel-Screen starten |
 | Maus | Zielen (Schussrichtung folgt dem Fadenkreuz) |
 | rechte Maustaste ziehen | Kamera um den Spieler drehen (nur 3D) |
@@ -40,10 +41,17 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 ## Features
 
 - Offene Welt (3600×3600 px) mit der **echten Straßenkarte von Mannheim-Käfertal/Franklin**
-  aus OpenStreetMap — Straßenverläufe inkl. Kurven, B 38 / A 6, **Franklin Loop** (Rundweg durch
-  die Grünflächen, an echte Straßenknoten angebunden), **Straßenbahn/OEG als Schienen** mit
-  Haltestellen, Fuß-/Radwege als offizielle Wege, Käfertaler Wald, Friedhof, Wasserturm,
-  Bahnhof Käfertal und ~1.400 echte Gebäude-Grundrisse (kein Planquadrat-Raster).
+  aus OpenStreetMap — Straßenverläufe inkl. Kurven, B 38 / A 6, **Franklin Loop**, **Straßenbahn/OEG
+  als Schienen**, Fuß-/Radwege als offizielle Wege, Käfertaler Wald, Friedhof, Wasserturm,
+  Bahnhof Käfertal und ~1.800 echte Gebäude-Grundrisse (kein Planquadrat-Raster).
+- **Franklin Loop exakt am realen Wegenetz**: Der Rundweg wird nicht frei erfunden, sondern als
+  Ring durch den echten OSM-Wegegraphen um das Franklin-Gelände gelegt (kürzeste Wege zwischen
+  West-/Nord-/Ost-/Süd-Ankerpunkten über reale OSM-Knoten, ~6,1 km, 110 echte Knoten) und an 60+
+  echte Straßenknoten angebunden.
+- **Straßenbahn exakt auf den realen Schienen**: Die OEG-Schmalspurstrecke (Linie 5/15, so wie in
+  OSM kartiert — die neue Linie 16 ist dort derzeit nicht erfasst) liegt als eigenes Schienennetz
+  im Spiel; darauf fährt eine **echte Straßenbahn** (pendelt entlang der Strecke,
+  2D + 3D-Modell mit Stromabnehmer und Scheinwerfern).
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto) kann Fahrbahn/Gehwege nicht verlassen;
   Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn weggetrimmt;
   Straßenschilder werden nicht mehr spiegelverkehrt gerendert (Drehrichtung wird korrigiert).

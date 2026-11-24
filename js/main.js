@@ -15,6 +15,7 @@ const Game = {
   police: [],
   peds: [],
   bikes: [],
+  trams: [],
   bullets: [],
   particles: [],
   mission: null,
@@ -126,6 +127,12 @@ const Game = {
       this.peds.push(new Ped(p.x, p.y));
     }
     for (let i = 0; i < CFG.BIKE_COUNT; i++) this.bikes.push(new Bike());
+    if (World.railWays.length >= 2) {
+      const totalLen = World.railWays.reduce((s, w) => s + w.len, 0);
+      for (let i = 0; i < CFG.TRAM_COUNT; i++) {
+        this.trams.push(new Tram(totalLen * (0.15 + 0.7 * i / Math.max(1, CFG.TRAM_COUNT - 1)) + rand(0, 300)));
+      }
+    }
   },
 
   onKey(e, down) {
@@ -225,8 +232,15 @@ const Game = {
       }
     } else {
       const fwd = (this.keys.KeyW || this.keys.ArrowUp) ? 1 : (this.keys.KeyS || this.keys.ArrowDown) ? -1 : 0;
-      const turnIn = (this.keys.KeyA || this.keys.ArrowLeft) ? -1 : (this.keys.KeyD || this.keys.ArrowRight) ? 1 : 0;
+      let turnIn = (this.keys.KeyA || this.keys.ArrowLeft) ? -1 : (this.keys.KeyD || this.keys.ArrowRight) ? 1 : 0;
       const step = Math.PI / 18;
+      if (turnIn === 0 && fwd > 0) {
+        const wa = World.wayAt(p.x, p.y, p.angle);
+        if (wa && wa.d < wa.width / 2 + 9) {
+          const diff = angleDiff(wa.ang, p.angle);
+          if (Math.abs(diff) > 0.03) turnIn = diff > 0 ? 1 : -1;
+        }
+      }
       if (turnIn !== 0) {
         p.turnAcc = (p.turnAcc || 0) + turnIn * Math.PI * dt;
         const steps = Math.floor(Math.abs(p.turnAcc) / step);
@@ -361,6 +375,7 @@ const Game = {
     for (const ped of this.peds) ped.update(dt);
     this.peds = this.peds.filter(pd => !pd.dead);
     for (const b of this.bikes) b.update(dt);
+    for (const t of this.trams) t.update(dt);
 
     for (const b of this.bullets) {
       b.update(dt);
@@ -631,6 +646,7 @@ const Game = {
     const drawables = [];
     for (const ped of this.peds) if (!ped.dead) drawables.push({ y: ped.y, f: () => this.drawPed(g, ped) });
     for (const b of this.bikes) drawables.push({ y: b.y, f: () => this.drawBike(g, b) });
+    for (const t of this.trams) drawables.push({ y: t.y, f: () => this.drawTram(g, t) });
     for (const car of this.cars) if (!car.dead) drawables.push({ y: car.y, f: () => this.drawCar(g, car) });
     for (const car of this.police) if (!car.dead) drawables.push({ y: car.y, f: () => this.drawCar(g, car) });
     if (!this.player.inCar) drawables.push({ y: this.player.y, f: () => this.drawPlayer(g) });
@@ -789,6 +805,37 @@ const Game = {
     g.restore();
   },
 
+  drawTram(g, t) {
+    g.save();
+    g.translate(t.x, t.y);
+    g.rotate(t.angle);
+    g.fillStyle = 'rgba(0,0,0,0.32)';
+    g.fillRect(-t.len / 2 + 4, -t.wdt / 2 + 5, t.len, t.wdt);
+    g.fillStyle = t.color;
+    g.fillRect(-t.len / 2, -t.wdt / 2, t.len, t.wdt);
+    g.fillStyle = 'rgba(16,26,36,0.9)';
+    g.fillRect(-t.len / 2 + 8, -t.wdt / 2 + 4, t.len - 16, t.wdt / 2 - 6);
+    g.fillStyle = 'rgba(255,250,215,0.95)';
+    for (let wx = -t.len / 2 + 13; wx < t.len / 2 - 16; wx += 15) g.fillRect(wx, t.wdt / 2 - 7, 9, 5);
+    g.strokeStyle = '#2a2a2a';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(-10, -t.wdt / 2); g.lineTo(-16, -t.wdt / 2 - 8); g.lineTo(16, -t.wdt / 2 - 8); g.lineTo(10, -t.wdt / 2);
+    g.stroke();
+    g.fillStyle = 'rgba(255,250,210,0.95)';
+    g.fillRect(t.len / 2 - 3, -t.wdt / 2 + 3, 3, 7);
+    g.fillRect(t.len / 2 - 3, t.wdt / 2 - 10, 3, 7);
+    g.fillStyle = 'rgba(255,60,60,0.95)';
+    g.fillRect(-t.len / 2, -t.wdt / 2 + 3, 3, 7);
+    g.fillRect(-t.len / 2, t.wdt / 2 - 10, 3, 7);
+    g.fillStyle = '#15181d';
+    for (const wx of [-t.len / 2 + 10, t.len / 2 - 22]) {
+      g.fillRect(wx, -t.wdt / 2 - 2, 12, 3);
+      g.fillRect(wx, t.wdt / 2 - 1, 12, 3);
+    }
+    g.restore();
+  },
+
   drawPed(g, ped) {
     g.fillStyle = 'rgba(0,0,0,0.25)';
     g.beginPath(); g.arc(ped.x + 2, ped.y + 3, ped.r, 0, 7); g.fill();
@@ -929,6 +976,14 @@ const Game = {
         for (let i = 1; i < w.pts.length; i++) mg.lineTo(w.pts[i][0] * s, w.pts[i][1] * s);
         mg.stroke();
       }
+      for (const w of World.railWays) {
+        mg.strokeStyle = '#8a8578';
+        mg.lineWidth = 1.6;
+        mg.beginPath();
+        mg.moveTo(w.pts[0][0] * s, w.pts[0][1] * s);
+        for (let i = 1; i < w.pts.length; i++) mg.lineTo(w.pts[i][0] * s, w.pts[i][1] * s);
+        mg.stroke();
+      }
       this._mmBase = c;
     }
     g.fillStyle = 'rgba(0,0,0,0.55)';
@@ -945,6 +1000,7 @@ const Game = {
       dot(this.mission.target.x, this.mission.target.y, '#50ff78', 4 + Math.sin(this.time * 6));
     }
     for (const pc of this.police) dot(pc.x, pc.y, '#ff4040', 3);
+    for (const t of this.trams) dot(t.x, t.y, '#ffd76a', 3);
     const p = this.player;
     g.save();
     g.translate(ox + p.x * s, oy + p.y * s);

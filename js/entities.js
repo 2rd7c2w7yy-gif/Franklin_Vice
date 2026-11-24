@@ -190,6 +190,25 @@ class Bike {
   }
 }
 
+class Tram {
+  constructor(spread) {
+    this.wk = World.newWalker(World.railWays);
+    if (spread) World.advanceWalker(this.wk, spread);
+    this.speed = 115;
+    this.len = 96;
+    this.wdt = 26;
+    this.color = choice(['#d8b93c', '#c94f4f', '#4f9dc9']);
+    this.ref = '5';
+    const p = World.walkerPoint(this.wk, 0);
+    this.x = p.x; this.y = p.y; this.angle = p.angle;
+  }
+  update(dt) {
+    World.advanceWalker(this.wk, this.speed * dt);
+    const p = World.walkerPoint(this.wk, 0);
+    this.x = p.x; this.y = p.y; this.angle = p.angle;
+  }
+}
+
 class Bullet {
   constructor(x, y, angle, from) {
     this.x = x; this.y = y;

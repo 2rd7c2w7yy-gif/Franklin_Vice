@@ -11,6 +11,9 @@ const World = {
   roadWays: [],
   nodeMap: new Map(),
   nodePos: new Map(),
+  railWays: [],
+  railNodeMap: new Map(),
+  railNodePos: new Map(),
   greens: [],
   buildings: [],
   trees: [],
@@ -118,6 +121,28 @@ const World = {
     this.driveSet = new Set(this.driveWays.map(w => w.idx));
     this.mainWays = this.roadWays.filter(w => w.width >= 30);
     this.mainSet = new Set(this.mainWays.map(w => w.idx));
+
+    for (const rw of GEO.rails) {
+      const pts = rw.p.map(([lon, lat]) => {
+        const w = this.toWorld(lon, lat);
+        return [w.x, w.y];
+      });
+      if (pts.length < 2) continue;
+      const cum = [0];
+      for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const len = cum[cum.length - 1];
+      if (len < 20) continue;
+      const w = { pts, cum, len, cls: 'rail', name: rw.n, width: 8, a: rw.a, b: rw.b };
+      w.idx = this.railWays.length;
+      this.railWays.push(w);
+      const idx = this.railWays.length - 1;
+      if (!this.railNodeMap.has(rw.a)) this.railNodeMap.set(rw.a, []);
+      if (!this.railNodeMap.has(rw.b)) this.railNodeMap.set(rw.b, []);
+      this.railNodeMap.get(rw.a).push({ w: idx, end: 'a' });
+      this.railNodeMap.get(rw.b).push({ w: idx, end: 'b' });
+      this.railNodePos.set(rw.a, pts[0]);
+      this.railNodePos.set(rw.b, pts[pts.length - 1]);
+    }
     this.buildSegHash();
 
     for (const gn of GEO.greens) {
@@ -256,21 +281,42 @@ const World = {
 
   buildSegHash() {
     this.segHash = new Map();
+    const putSeg = (seg) => {
+      const x0 = Math.min(seg.ax, seg.bx) - 40, x1 = Math.max(seg.ax, seg.bx) + 40;
+      const y0 = Math.min(seg.ay, seg.by) - 40, y1 = Math.max(seg.ay, seg.by) + 40;
+      for (let cx = Math.floor(x0 / this.CELL); cx <= Math.floor(x1 / this.CELL); cx++) {
+        for (let cy = Math.floor(y0 / this.CELL); cy <= Math.floor(y1 / this.CELL); cy++) {
+          const k = cx + ',' + cy;
+          if (!this.segHash.has(k)) this.segHash.set(k, []);
+          this.segHash.get(k).push(seg);
+        }
+      }
+    };
     for (const w of this.roadWays) {
       for (let i = 0; i < w.pts.length - 1; i++) {
         const [ax, ay] = w.pts[i], [bx, by] = w.pts[i + 1];
-        const seg = { ax, ay, bx, by, w: w.width, wi: w.idx };
-        const x0 = Math.min(ax, bx) - 40, x1 = Math.max(ax, bx) + 40;
-        const y0 = Math.min(ay, by) - 40, y1 = Math.max(ay, by) + 40;
-        for (let cx = Math.floor(x0 / this.CELL); cx <= Math.floor(x1 / this.CELL); cx++) {
-          for (let cy = Math.floor(y0 / this.CELL); cy <= Math.floor(y1 / this.CELL); cy++) {
-            const k = cx + ',' + cy;
-            if (!this.segHash.has(k)) this.segHash.set(k, []);
-            this.segHash.get(k).push(seg);
-          }
-        }
+        putSeg({ ax, ay, bx, by, w: w.width, wi: w.idx });
       }
     }
+    for (const w of this.railWays) {
+      for (let i = 0; i < w.pts.length - 1; i++) {
+        const [ax, ay] = w.pts[i], [bx, by] = w.pts[i + 1];
+        putSeg({ ax, ay, bx, by, w: w.width, wi: -1000000 - w.idx });
+      }
+    }
+  },
+
+  wayAt(x, y, refAngle) {
+    let best = null;
+    for (const s of this.segsNear(x, y, 70)) {
+      const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
+      if (c.d < s.w / 2 + 14 && (!best || c.d < best.d)) {
+        let ang = Math.atan2(s.by - s.ay, s.bx - s.ax);
+        if (Math.cos(ang - (refAngle || 0)) < 0) ang += Math.PI;
+        best = { wi: s.wi, ang, d: c.d, width: s.w };
+      }
+    }
+    return best;
   },
 
   segsNear(x, y, r) {
@@ -333,35 +379,41 @@ const World = {
     return pts.map(p => [cx + (p[0] - cx) * 0.5, cy + (p[1] - cy) * 0.5]);
   },
 
-  newWalker(pool) {
+  newWalker(pool, nodeMap) {
     pool = pool || this.roadWays;
     const i = (Math.random() * pool.length) | 0;
     const w = pool[i];
-    const idx = this.roadWays.indexOf(w);
-    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len };
+    let idx = this.roadWays.indexOf(w);
+    let ways = this.roadWays;
+    if (idx < 0) { idx = this.railWays.indexOf(w); ways = this.railWays; }
+    const nm = nodeMap || (ways === this.railWays ? this.railNodeMap : this.nodeMap);
+    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len, ways, nodeMap: nm };
   },
 
   advanceWalker(wk, dist) {
+    const ways = wk.ways || this.roadWays;
+    const nm = wk.nodeMap || this.nodeMap;
     let rem = dist;
     let guard = 0;
     while (rem > 0 && guard++ < 10) {
-      const way = this.roadWays[wk.w];
+      const way = ways[wk.w];
       const target = wk.dir > 0 ? way.len : 0;
       const space = Math.abs(target - wk.d);
       if (rem <= space) { wk.d += wk.dir * rem; rem = 0; break; }
       rem -= space;
       wk.d = target;
       const node = wk.dir > 0 ? way.b : way.a;
-      const opts = (this.nodeMap.get(node) || []).filter(e => e.w !== wk.w);
+      const opts = (nm.get(node) || []).filter(e => e.w !== wk.w);
       if (!opts.length) { wk.dir *= -1; continue; }
       const e = opts[(Math.random() * opts.length) | 0];
       wk.w = e.w;
-      if (e.end === 'a') { wk.dir = 1; wk.d = 0; } else { wk.dir = -1; wk.d = this.roadWays[e.w].len; }
+      if (e.end === 'a') { wk.dir = 1; wk.d = 0; } else { wk.dir = -1; wk.d = ways[e.w].len; }
     }
   },
 
   walkerPoint(wk, off) {
-    const p = this.pointAt(this.roadWays[wk.w], wk.d);
+    const ways = wk.ways || this.roadWays;
+    const p = this.pointAt(ways[wk.w], wk.d);
     const a = p.ang + (wk.dir < 0 ? Math.PI : 0);
     return { x: p.x + -Math.sin(a) * off, y: p.y + Math.cos(a) * off, angle: a };
   },
