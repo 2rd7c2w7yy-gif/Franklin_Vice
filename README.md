@@ -40,20 +40,19 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 
 ## Features
 
-- Offene Welt mit der **echten Straßenkarte nur des Stadtteils Franklin** aus OpenStreetMap —
-  Ausschnitt vom **Alter Postweg (Westen) bis zur Bensheimer Straße / B 38 (Osten)**, vom
-  OEG-/Römerstraßen-Korridor (Süden) bis zum Käfertaler Wald (Norden). Alle Wege werden an den
-  Rändern exakt auf den Ausschnitt zugeschnitten (echte Verläufe bleiben erhalten):
-  **Franklin Loop**, **Straßenbahn/OEG als Schienen**, Fuß-/Radwege, Käfertaler Wald, Friedhof,
-  Wasserturm, Bahnhof Käfertal und ~370 echte Gebäude-Grundrisse (kein Planquadrat-Raster).
-- **Franklin Loop exakt am realen Wegenetz**: Der Rundweg wird nicht frei erfunden, sondern als
-  Ring durch den echten OSM-Wegegraphen um das Franklin-Gelände gelegt (kürzeste Wege zwischen
-  West-/Nord-/Ost-/Süd-Ankerpunkten über reale OSM-Knoten, ~6,1 km, 110 echte Knoten) und an 60+
-  echte Straßenknoten angebunden.
-- **Straßenbahn exakt auf den realen Schienen**: Die OEG-Schmalspurstrecke (Linie 5/15, so wie in
-  OSM kartiert — die neue Linie 16 ist dort derzeit nicht erfasst) liegt als eigenes Schienennetz
-  im Spiel; darauf fährt eine **echte Straßenbahn** (pendelt entlang der Strecke,
-  2D + 3D-Modell mit Stromabnehmer und Scheinwerfern).
+- Offene Welt mit der **echten Straßenkarte des Stadtteils Franklin (Mannheim-Käfertal)** aus
+  OpenStreetMap — Ausschnitt **vom Alter Postweg (Westen) bis zur Bensheimer Straße (Süden)**,
+  östlich bis Columbusstraße, nördlich bis Käfertaler Wald
+  (BBox 8.5185–8.5415 °O / 49.5125–49.5265 °N). Alle Ways werden exakt auf den Ausschnitt
+  zugeschnitten; die echten Namen und Verläufe bleiben erhalten: **George-Washington-Straße,
+  George-Sullivan-Ring, James-Monroe-Ring, Thomas-Jefferson-Straße, Franklin-D.-Roosevelt-Straße,
+  Abraham-Lincoln-Allee, Robert-Funari-Straße, Columbusstraße, Europa-Achse, Waldstraße …**
+- **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
+  („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
+- **Straßenbahn exakt auf den realen Schienen**: die neue **Linie 16** (Bensheimer Straße →
+  Franklin Mitte → Franklinschule → Sullivan, 1,8 km) plus OEG (Linie 5/15) liegen als Schienennetz
+  vor; darauf fahren Straßenbahnen (2D + 3D).
+
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto), **alle KI-Figuren, Autos, Lastenräder und
   die Polizei** bewegen sich ausschließlich auf Wegen — der begehbare Korridor endet am
   Fahrbahnrand; die Figur startet und respawnt per Snap auf einem echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn

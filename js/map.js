@@ -684,7 +684,7 @@ const World = {
     g.font = 'bold 46px Verdana, sans-serif';
     const plaza = this.pois.plaza;
     g.fillText('FRANKLIN', plaza.x, plaza.y - 120);
-    const kaef = this.toWorld(8.5935, 49.5085);
+    const kaef = this.toWorld(8.5205, 49.5252);
     g.fillText('KÄFERTAL', kaef.x, kaef.y);
     if (this.greens.length) {
       let biggest = null, barea = 0;
