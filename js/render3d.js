@@ -82,23 +82,45 @@ const Render3D = {
     ground.position.set(W / 2, 0, H / 2);
     this.scene.add(ground);
 
-    this.facadeTex = this.makeFacadeTexture(0);
-    this.facadeTex.wrapS = this.facadeTex.wrapT = THREE.RepeatWrapping;
-    this.facadeTex.repeat.set(1 / 52, 1 / 52);
+    this.facadeTexs = [0, 1, 2].map(v => {
+      const t = this.makeFacadeTexture(v);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(1 / 52, 1 / 52);
+      return t;
+    });
     for (const b of World.buildings) {
       const shape = new THREE.Shape();
       b.pts.forEach(([x, y], i) => {
         if (i === 0) shape.moveTo(x, -y);
         else shape.lineTo(x, -y);
       });
-      const h3 = 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48);
+      const h3 = b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48);
       const geo = new THREE.ExtrudeGeometry(shape, { depth: h3, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
       const tint = new THREE.Color(b.color);
-      const sideMat = new THREE.MeshLambertMaterial({ map: this.facadeTex, color: tint });
-      const capMat = new THREE.MeshLambertMaterial({ color: tint.clone().multiplyScalar(0.6) });
+      const commercial = ['commercial', 'retail', 'office', 'industrial', 'warehouse', 'garage', 'church', 'school', 'hospital'].includes(b.bt);
+      const variant = commercial ? 1 : b.bt === 'apartments' ? 2 : 0;
+      const ftex = this.facadeTexs[variant].clone();
+      ftex.needsUpdate = true;
+      const sideMat = new THREE.MeshLambertMaterial({ map: ftex, color: tint });
+      const capCol = World.roofColor(b);
+      const capMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) });
       const mesh = new THREE.Mesh(geo, [sideMat, capMat]);
       this.scene.add(mesh);
+      if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
+        const rshape = new THREE.Shape();
+        b.pts.forEach(([x, y], i) => {
+          const px = b.cx + (x - b.cx) * 0.7;
+          const py = b.cy + (y - b.cy) * 0.7;
+          if (i === 0) rshape.moveTo(px, -py);
+          else rshape.lineTo(px, -py);
+        });
+        const rgeo = new THREE.ExtrudeGeometry(rshape, { depth: 8, bevelEnabled: false, curveSegments: 2 });
+        rgeo.rotateX(-Math.PI / 2);
+        const roofMesh = new THREE.Mesh(rgeo, new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) }));
+        roofMesh.position.y = h3;
+        this.scene.add(roofMesh);
+      }
     }
 
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2f });
@@ -167,37 +189,6 @@ const Render3D = {
       spr.position.set(nx, 22, nz);
       this.scene.add(spr);
     }
-    this.buildPhotoSprites();
-  },
-
-  buildPhotoSprites() {
-    this.photoSprites = [];
-    if (typeof PHOTODATA === 'undefined') return;
-    for (const p of PHOTODATA) {
-      const mat = new THREE.SpriteMaterial({ color: 0x9ecbff, transparent: true, opacity: 0.9 });
-      const spr = new THREE.Sprite(mat);
-      spr.scale.set(44, 32, 1);
-      spr.position.set(p.x, 30, p.y);
-      this.scene.add(spr);
-      p._spr = spr;
-      this.photoSprites.push(spr);
-    }
-  },
-
-  syncPhotoSprites() {
-    if (typeof PHOTODATA === 'undefined' || typeof Photos === 'undefined') return;
-    for (const p of PHOTODATA) {
-      if (p.loaded && !p._tex && Photos.imgs[p.f] && p._spr) {
-        p._tex = new THREE.Texture(Photos.imgs[p.f]);
-        if ('colorSpace' in p._tex) p._tex.colorSpace = THREE.SRGBColorSpace;
-        else p._tex.encoding = THREE.sRGBEncoding;
-        p._tex.needsUpdate = true;
-        p._spr.material.map = p._tex;
-        p._spr.material.color.set(0xffffff);
-        p._spr.material.needsUpdate = true;
-        p._spr.scale.set(60, 42, 1);
-      }
-    }
   },
 
   nearestRoadWorld(x, y) {
@@ -215,17 +206,33 @@ const Render3D = {
     const c = document.createElement('canvas');
     c.width = 128; c.height = 256;
     const g = c.getContext('2d');
-    g.fillStyle = variant ? '#c9c9c9' : '#d4d4d4';
-    g.fillRect(0, 0, 128, 256);
-    g.fillStyle = 'rgba(0,0,0,0.10)';
-    for (let y = 0; y < 256; y += 8) g.fillRect(0, y, 128, 1);
-    for (let r = 0; r < 8; r++) {
-      for (let col = 0; col < 4; col++) {
-        const x = 8 + col * 30, y = 12 + r * 30;
-        g.fillStyle = Math.random() < 0.14 ? '#ffdf9a' : '#2a3646';
-        g.fillRect(x, y, 20, 18);
+    if (variant === 1) {
+      g.fillStyle = '#aebfc9';
+      g.fillRect(0, 0, 128, 256);
+      for (let y = 0; y < 256; y += 32) {
+        g.fillStyle = '#33465a';
+        g.fillRect(0, y + 6, 128, 20);
         g.fillStyle = 'rgba(255,255,255,0.35)';
-        g.fillRect(x, y, 20, 4);
+        g.fillRect(0, y + 6, 128, 4);
+      }
+    } else {
+      g.fillStyle = variant === 2 ? '#cccccc' : '#d4d4d4';
+      g.fillRect(0, 0, 128, 256);
+      g.fillStyle = 'rgba(0,0,0,0.10)';
+      for (let y = 0; y < 256; y += 8) g.fillRect(0, y, 128, 1);
+      const cols = variant === 2 ? 4 : 4, rows = variant === 2 ? 8 : 8;
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const x = 8 + col * 30, y = 12 + r * 30;
+          g.fillStyle = Math.random() < (variant === 2 ? 0.2 : 0.14) ? '#ffdf9a' : '#2a3646';
+          g.fillRect(x, y, 20, 18);
+          g.fillStyle = 'rgba(255,255,255,0.35)';
+          g.fillRect(x, y, 20, 4);
+          if (variant === 2) {
+            g.fillStyle = 'rgba(0,0,0,0.25)';
+            g.fillRect(x, y + 18, 20, 4);
+          }
+        }
       }
     }
     const tex = new THREE.CanvasTexture(c);
@@ -486,7 +493,6 @@ const Render3D = {
     if (!this.available) return;
     this.updateSky();
     this.syncEntities();
-    this.syncPhotoSprites();
     this.updateCamera(dt);
     this.renderer.render(this.scene, this.camera);
   }

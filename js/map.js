@@ -128,7 +128,7 @@ const World = {
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       const col = CFG.PALETTE.building[Math.abs((cx * 13 + cy * 7) | 0) % CFG.PALETTE.building.length];
-      this.buildings.push({ pts, color: col, cx, cy, name: bd.n });
+      this.buildings.push({ pts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes' });
     }
 
     let treeBudget = 320;
@@ -351,6 +351,13 @@ const World = {
     return false;
   },
 
+  roofColor(b) {
+    if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
+      return ['#7a4436', '#6a4a5a', '#4a5a6a', '#5a4632'][Math.abs((b.cx * 7 + b.cy * 3) | 0) % 4];
+    }
+    return this.shade(b.color.startsWith('#') ? b.color : '#999999', -55);
+  },
+
   paint() {
     const c = document.createElement('canvas');
     c.width = this.W;
@@ -420,13 +427,13 @@ const World = {
     }
 
     for (const b of this.buildings) {
-      g.fillStyle = b.color;
+      g.fillStyle = this.roofColor(b);
       g.beginPath();
       g.moveTo(b.pts[0][0], b.pts[0][1]);
       for (let i = 1; i < b.pts.length; i++) g.lineTo(b.pts[i][0], b.pts[i][1]);
       g.closePath();
       g.fill();
-      g.fillStyle = this.shade(b.color.startsWith('#') ? b.color : '#999999', -40);
+      g.fillStyle = 'rgba(0,0,0,0.16)';
       g.beginPath();
       for (let i = 0; i < b.pts.length; i++) {
         const px = b.cx + (b.pts[i][0] - b.cx) * 0.82;

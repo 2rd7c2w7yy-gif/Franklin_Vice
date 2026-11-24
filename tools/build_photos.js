@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const photosDir = process.argv[2] || path.join(__dirname, '..', 'photos');
-const outFile = process.argv[3] || path.join(__dirname, '..', 'js', 'photodata.js');
+const outFile = process.argv[3] || path.join(photosDir, 'photos.json');
 
 const geoSrc = fs.readFileSync(path.join(__dirname, '..', 'js', 'geodata.js'), 'utf8');
 const GEO = JSON.parse(geoSrc.replace(/^const GEO = /, '').replace(/;\s*$/, ''));
@@ -145,6 +145,6 @@ for (const f of files) {
   console.log('OK', f, 'lat=' + exif.lat.toFixed(6), 'lon=' + exif.lon.toFixed(6), 'yaw=' + exif.yaw, '-> world', Math.round(w.x), Math.round(w.y), 'building=' + nb.idx, '(dist ' + Math.round(nb.dist) + 'px)');
 }
 
-const out = 'const PHOTODATA = ' + JSON.stringify(entries) + ';\n';
+const out = JSON.stringify({ note: 'Nur Referenz: welche Fotos welches Gebaeude zeigen. Wird NICHT vom Spiel geladen/geladen angezeigt.', photos: entries }, null, 1) + '\n';
 fs.writeFileSync(outFile, out);
-console.log('\n' + entries.length + ' Fotos -> ' + outFile + ' (' + out.length + ' bytes)');
+console.log('\n' + entries.length + ' Fotos -> ' + outFile + ' (Referenz-Manifest, keine Anzeige im Spiel)');

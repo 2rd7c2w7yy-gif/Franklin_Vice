@@ -65,18 +65,15 @@ oder **KartaView** sowie **Wikimedia Commons** — wer eigene, passend lizenzier
 sie gern ins Repo legen (`textures/`); auf Wunsch baue ich eine Manifest-Anbindung dafür ein.
 Aktuell ist die Grafik komplett prozedural und damit lizenzfrei.
 
-## Eigene Fotos aus Franklin einbinden (GPS/EXIF)
+## Referenz-Fotos aus Franklin (ohne Anzeige im Spiel)
 
-Ja — Fotos mit GPS-Metadaten lassen sich exakt auf der Karte platzieren:
-
-1. Smartphone-Fotos (JPEG mit EXIF-GPS) nach `photos/` legen (nur eigene/lizenzierte Fotos!)
-2. `node tools/build_photos.js` ausführen — liest GPS-Koordinaten + Aufnahmerichtung
-   (EXIF), projiziert sie auf die OSM-Karte, matched das nächstgelegene Gebäude und
-   schreibt `js/photodata.js`
-3. `photos/` + `js/photodata.js` committen/pushen
-
-Im Spiel: Kamera-Marker auf Karte & Minimap, 3D-Billboard an der GPS-Position,
-großes Foto-Overlay beim Näherkommen (siehe `photos/README.md`).
+Fotos aus Franklin (eigene, mit EXIF-GPS) werden **nicht im Spiel angezeigt**.
+Sie dienen als Vorlage: `node tools/build_photos.js` liest GPS + Blickrichtung
+und schreibt `photos/photos.json` (Foto → nächstgelegenes Gebäude). Anhand der
+Fotos werden dann die Gebäude-Polygone in `js/geodata.js` angepasst, damit
+Grundriss, Höhe (`building:levels`), Dachform (`roof:shape` — in 3D als
+Dachkörper, in 2D als Dachfarbe) und Fassade (Typ-abhängige Textur) den echten
+Häusern möglichst nahekommen. Details siehe `photos/README.md`.
 
 ## Technik
 

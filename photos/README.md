@@ -1,25 +1,16 @@
-# Eigene Fotos aus Franklin
+# Referenz-Fotos aus Franklin (werden NICHT im Spiel angezeigt)
 
-Lege hier JPEGs ab, die mit dem Handy in Franklin aufgenommen wurden
-(mit GPS-EXIF-Daten — das ist bei Smartphone-Fotos standardmäßig an).
+Fotos dienen ausschließlich als **Vorlage**, damit die Gebäude-Polygone in
+`js/geodata.js` (Grundriss, Höhe, Dachform, Fassade) den echten Häusern
+möglichst originalgetreu nachempfunden werden können. Im Spiel selbst werden
+**keine Fotos gerendert**.
 
 ## Ablauf
 
-1. Fotos hierher kopieren, z. B. `photos/IMG_001.jpg`
-2. Generator laufen lassen (im Repo-Root, braucht nur Node.js, keine Pakete):
-
-   ```bash
-   node tools/build_photos.js
-   ```
-
-   Der liest die GPS-Koordinaten + Aufnahmerichtung aus dem EXIF, projiziert
-   sie auf die OpenStreetMap-Karte des Spiels, ordnet jedes Foto dem
-   nächstgelegenen Gebäude zu und schreibt `js/photodata.js` neu.
-3. `photos/` + die neue `js/photodata.js` committen und pushen.
-
-Im Spiel erscheinen die Fotos dann als Kamera-Marker auf Karte und Minimap,
-als 3D-Billboard an der exakten GPS-Position (Blickrichtung aus EXIF) und als
-großes Overlay, wenn du dich in der Nähe befindest.
-
-Hinweis: Nur eigene Fotos verwenden (oder entsprechend lizenzierte) —
-keine Street-View-/Drittanbieter-Bilder.
+1. Smartphone-Fotos (JPEG mit EXIF-GPS) hierher legen, z. B. `photos/IMG_001.jpg`
+   (nur eigene / entsprechend lizenzierte Fotos — keine Street-View-Bilder)
+2. `node tools/build_photos.js` ausführen: liest GPS + Aufnahmerichtung (EXIF),
+   projiziert auf die OSM-Karte, matched das nächstgelegene Gebäude und schreibt
+   das Referenz-Manifest `photos/photos.json` (welches Foto → welches Gebäude, Blickrichtung)
+3. `photos/` committen/pushen — dann werden die Fotos analysiert und die
+   passenden Gebäude-Polygone in `js/geodata.js` angepasst (Grundriss/Höhe/Dach/Fassade)
