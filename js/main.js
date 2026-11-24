@@ -14,6 +14,7 @@ const Game = {
   cars: [],
   police: [],
   peds: [],
+  bikes: [],
   bullets: [],
   particles: [],
   mission: null,
@@ -56,7 +57,7 @@ const Game = {
     World.build();
     this.marker = { x: World.pois.station.x, y: World.pois.station.y, type: 'taxi' };
     this.player = {
-      x: World.pois.plaza.x + 50, y: World.pois.plaza.y + 50, angle: -Math.PI / 2,
+      x: World.pois.plaza.x, y: World.pois.plaza.y, angle: -Math.PI / 2,
       vx: 0, vy: 0, r: 11,
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
@@ -113,17 +114,18 @@ const Game = {
 
   spawnInitial() {
     for (let i = 0; i < CFG.PARKED_COUNT; i++) {
-      const p = World.randomRoadPoint(false);
+      const p = World.randomRoadPoint(false, World.driveWays);
       this.cars.push(new Car(p.x, p.y, p.angle, { ai: false }));
     }
     for (let i = 0; i < CFG.TRAFFIC_COUNT; i++) {
-      const p = World.randomRoadPoint(false);
+      const p = World.randomRoadPoint(false, World.driveWays);
       this.cars.push(new Car(p.x, p.y, p.angle, { ai: true }));
     }
     for (let i = 0; i < CFG.PED_COUNT; i++) {
-      const p = World.randomRoadPoint(true);
+      const p = World.randomRoadPoint(true, World.roadWays);
       this.peds.push(new Ped(p.x, p.y));
     }
+    for (let i = 0; i < CFG.BIKE_COUNT; i++) this.bikes.push(new Bike());
   },
 
   onKey(e, down) {
@@ -152,8 +154,9 @@ const Game = {
       const car = p.inCar;
       const f = car.forward();
       const rx = -f.y, ry = f.x;
-      p.x = car.x + rx * 34;
-      p.y = car.y + ry * 34;
+      const sp = World.snapToRoad(car.x + rx * 34, car.y + ry * 34);
+      p.x = sp.x;
+      p.y = sp.y;
       p.inCar = null;
       car.vx = 0; car.vy = 0;
       car.ai = false;
@@ -200,6 +203,7 @@ const Game = {
     if (p.inCar) {
       const car = p.inCar;
       const iv = this.inputVector();
+      const ox = car.x, oy = car.y;
       car.drive(dt, {
         throttle: -iv.y,
         steer: iv.x,
@@ -207,6 +211,10 @@ const Game = {
       });
       p.x = car.x; p.y = car.y; p.angle = car.angle;
       const impact = car.collideWorld();
+      if (!World.onRoadOrWalk(car.x, car.y)) {
+        car.x = ox; car.y = oy; car.vx = 0; car.vy = 0;
+        p.x = car.x; p.y = car.y;
+      }
       if (impact > 260) {
         car.health -= impact / 55;
         this.shake = Math.min(18, impact / 22);
@@ -239,8 +247,9 @@ const Game = {
       if (sp > max) { p.vx = p.vx / sp * max; p.vy = p.vy / sp * max; }
       p.vx *= Math.max(0, 1 - 6 * dt);
       p.vy *= Math.max(0, 1 - 6 * dt);
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
+      const nx = p.x + p.vx * dt;
+      const ny = p.y + p.vy * dt;
+      if (World.onRoadOrWalk(nx, ny)) { p.x = nx; p.y = ny; } else { p.vx = 0; p.vy = 0; }
       const hit = World.collideCircle(p.x, p.y, p.r);
       if (hit) { p.x += hit.x; p.y += hit.y; p.vx *= 0.2; p.vy *= 0.2; }
     }
@@ -347,6 +356,7 @@ const Game = {
 
     for (const ped of this.peds) ped.update(dt);
     this.peds = this.peds.filter(pd => !pd.dead);
+    for (const b of this.bikes) b.update(dt);
 
     for (const b of this.bullets) {
       b.update(dt);
@@ -616,6 +626,7 @@ const Game = {
     this.drawMarkers(g);
     const drawables = [];
     for (const ped of this.peds) if (!ped.dead) drawables.push({ y: ped.y, f: () => this.drawPed(g, ped) });
+    for (const b of this.bikes) drawables.push({ y: b.y, f: () => this.drawBike(g, b) });
     for (const car of this.cars) if (!car.dead) drawables.push({ y: car.y, f: () => this.drawCar(g, car) });
     for (const car of this.police) if (!car.dead) drawables.push({ y: car.y, f: () => this.drawCar(g, car) });
     if (!this.player.inCar) drawables.push({ y: this.player.y, f: () => this.drawPlayer(g) });
@@ -758,6 +769,22 @@ const Game = {
     g.restore();
   },
 
+  drawBike(g, b) {
+    g.save();
+    g.translate(b.x, b.y);
+    g.rotate(b.angle);
+    g.strokeStyle = '#1a1a1a';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(-6, 0, 4.5, 0, 7); g.stroke();
+    g.beginPath(); g.arc(7, 0, 4.5, 0, 7); g.stroke();
+    g.beginPath();
+    g.moveTo(-6, 0); g.lineTo(-1, -5); g.lineTo(7, 0); g.lineTo(2, -6); g.lineTo(-1, -5);
+    g.stroke();
+    g.fillStyle = b.color;
+    g.beginPath(); g.arc(1, -8, 4, 0, 7); g.fill();
+    g.restore();
+  },
+
   drawPed(g, ped) {
     g.fillStyle = 'rgba(0,0,0,0.25)';
     g.beginPath(); g.arc(ped.x + 2, ped.y + 3, ped.r, 0, 7); g.fill();
@@ -877,25 +904,32 @@ const Game = {
     const vw = this.vw;
     const s = 190 / World.W;
     const ox = vw - 202, oy = 12;
+    if (!this._mmBase) {
+      const c = document.createElement('canvas');
+      c.width = 190; c.height = 190;
+      const mg = c.getContext('2d');
+      for (const gn of World.greens) {
+        mg.fillStyle = gn.kind === 'forest' ? '#274a24' : gn.kind === 'cemetery' ? '#3a4438' : '#3f5a2e';
+        mg.beginPath();
+        mg.moveTo(gn.pts[0][0] * s, gn.pts[0][1] * s);
+        for (let i = 1; i < gn.pts.length; i++) mg.lineTo(gn.pts[i][0] * s, gn.pts[i][1] * s);
+        mg.closePath();
+        mg.fill();
+      }
+      mg.strokeStyle = '#4a4d53';
+      mg.lineCap = 'round';
+      for (const w of World.roadWays) {
+        mg.lineWidth = Math.max(1, w.width * s);
+        mg.beginPath();
+        mg.moveTo(w.pts[0][0] * s, w.pts[0][1] * s);
+        for (let i = 1; i < w.pts.length; i++) mg.lineTo(w.pts[i][0] * s, w.pts[i][1] * s);
+        mg.stroke();
+      }
+      this._mmBase = c;
+    }
     g.fillStyle = 'rgba(0,0,0,0.55)';
     g.fillRect(ox - 3, oy - 3, 196, 196);
-    for (const gn of World.greens) {
-      g.fillStyle = gn.kind === 'forest' ? '#274a24' : gn.kind === 'cemetery' ? '#3a4438' : '#3f5a2e';
-      g.beginPath();
-      g.moveTo(ox + gn.pts[0][0] * s, oy + gn.pts[0][1] * s);
-      for (let i = 1; i < gn.pts.length; i++) g.lineTo(ox + gn.pts[i][0] * s, oy + gn.pts[i][1] * s);
-      g.closePath();
-      g.fill();
-    }
-    g.strokeStyle = '#4a4d53';
-    g.lineCap = 'round';
-    for (const w of World.roadWays) {
-      g.lineWidth = Math.max(1.5, w.width * s);
-      g.beginPath();
-      g.moveTo(ox + w.pts[0][0] * s, oy + w.pts[0][1] * s);
-      for (let i = 1; i < w.pts.length; i++) g.lineTo(ox + w.pts[i][0] * s, oy + w.pts[i][1] * s);
-      g.stroke();
-    }
+    g.drawImage(this._mmBase, ox, oy);
     const dot = (x, y, c, r) => {
       g.fillStyle = c;
       g.beginPath(); g.arc(ox + x * s, oy + y * s, r, 0, 7); g.fill();

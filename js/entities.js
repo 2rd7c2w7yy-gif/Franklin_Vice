@@ -63,7 +63,7 @@ class Car {
   }
 
   followRoad(dt) {
-    if (!this.wk) this.wk = World.newWalker();
+    if (!this.wk) this.wk = World.newWalker(World.driveWays);
     if (this.reverseTime > 0) {
       this.reverseTime -= dt;
       World.advanceWalker(this.wk, -120 * dt);
@@ -154,7 +154,7 @@ class Ped {
       this.angle = a;
       if (this.fleeT <= 0) this.state = 'walk';
     } else {
-      if (!this.wk) this.wk = World.newWalker();
+      if (!this.wk) this.wk = World.newWalker(World.roadWays);
       World.advanceWalker(this.wk, this.speed * dt);
       const w = World.roadWays[this.wk.w];
       const p = World.walkerPoint(this.wk, World.sidewalkOff(w));
@@ -169,6 +169,24 @@ class Ped {
     this.state = 'flee';
     this.fleeX = fromX; this.fleeY = fromY;
     this.fleeT = rand(2, 3.5);
+  }
+}
+
+class Bike {
+  constructor() {
+    this.wk = World.newWalker(World.bikeWays);
+    this.speed = rand(60, 100);
+    this.r = 8;
+    this.color = choice(['#d94f4f', '#4f8fd9', '#d9b44f', '#6ac96a', '#c9c9c9', '#e07b39']);
+    const w = World.roadWays[this.wk.w];
+    const p = World.walkerPoint(this.wk, Math.max(8, w.width * 0.32));
+    this.x = p.x; this.y = p.y; this.angle = p.angle;
+  }
+  update(dt) {
+    World.advanceWalker(this.wk, this.speed * dt);
+    const w = World.roadWays[this.wk.w];
+    const p = World.walkerPoint(this.wk, Math.max(8, w.width * 0.32));
+    this.x = p.x; this.y = p.y; this.angle = p.angle;
   }
 }
 

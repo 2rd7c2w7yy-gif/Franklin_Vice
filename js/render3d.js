@@ -7,6 +7,7 @@ const Render3D = {
   hemi: null,
   carMeshes: new Map(),
   pedMeshes: new Map(),
+  bikeMeshes: new Map(),
   playerMesh: null,
   marker: null,
   bulletPool: [],
@@ -89,6 +90,8 @@ const Render3D = {
       return t;
     });
     for (const b of World.buildings) {
+      const bxs = b.pts.map(p => p[0]), bys = b.pts.map(p => p[1]);
+      if ((Math.max(...bxs) - Math.min(...bxs)) * (Math.max(...bys) - Math.min(...bys)) < 700) continue;
       const shape = new THREE.Shape();
       b.pts.forEach(([x, y], i) => {
         if (i === 0) shape.moveTo(x, -y);
@@ -350,6 +353,32 @@ const Render3D = {
     return grp;
   },
 
+  makeBikeMesh(b) {
+    const grp = new THREE.Group();
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 2.4), new THREE.MeshLambertMaterial({ color: 0x222222 }));
+    frame.position.y = 5.5;
+    grp.add(frame);
+    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    for (const wx of [-7, 7]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 1.6, 10), wheelMat);
+      w.rotation.x = Math.PI / 2;
+      w.position.set(wx, 3.4, 0);
+      grp.add(w);
+    }
+    const rider = new THREE.Mesh(new THREE.CapsuleGeometry(3, 6, 4, 8), new THREE.MeshLambertMaterial({ color: new THREE.Color(b.color) }));
+    rider.position.y = 11.5;
+    grp.add(rider);
+    const box = new THREE.Mesh(new THREE.BoxGeometry(7, 6, 5), new THREE.MeshLambertMaterial({ color: 0xb08a4f }));
+    box.position.set(-9, 8, 0);
+    grp.add(box);
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(9, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.15;
+    grp.add(shadow);
+    this.scene.add(grp);
+    return grp;
+  },
+
   makePedMesh(ped) {
     const grp = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(3.4, 7, 4, 8), new THREE.MeshLambertMaterial({ color: new THREE.Color(ped.color) }));
@@ -389,6 +418,17 @@ const Render3D = {
         this.scene.remove(m);
         this.carMeshes.delete(car);
       }
+    }
+    const seenBikes = new Set();
+    for (const b of Game.bikes) {
+      seenBikes.add(b);
+      let m = this.bikeMeshes.get(b);
+      if (!m) { m = this.makeBikeMesh(b); this.bikeMeshes.set(b, m); }
+      m.position.set(b.x, 0, b.y);
+      m.rotation.y = -b.angle;
+    }
+    for (const [b, m] of this.bikeMeshes) {
+      if (!seenBikes.has(b)) { this.scene.remove(m); this.bikeMeshes.delete(b); }
     }
     const seenPeds = new Set();
     for (const ped of Game.peds) {

@@ -20,7 +20,9 @@ const World = {
   lampNodes: [],
   collHash: new Map(),
 
-  ROAD_WIDTHS: { motorway: 64, motorway_link: 40, trunk: 60, trunk_link: 40, primary: 48, primary_link: 36, secondary: 44, secondary_link: 34, tertiary: 38, tertiary_link: 32, unclassified: 34, residential: 32, living_street: 30, service: 24, track: 18 },
+  ROAD_WIDTHS: { motorway: 64, motorway_link: 40, trunk: 60, trunk_link: 40, primary: 48, primary_link: 36, secondary: 44, secondary_link: 34, tertiary: 38, tertiary_link: 32, unclassified: 34, residential: 32, living_street: 30, service: 24, track: 18, path: 13 },
+  segHash: new Map(),
+  driveWays: [],
 
   toWorld(lon, lat) {
     return { x: this.PAD + (lon - this.bbox[0]) * this.mPerDegLon * this.s, y: this.PAD + (this.bbox[3] - lat) * this.mPerDegLat * this.s };
@@ -60,7 +62,7 @@ const World = {
   },
 
   polyCollide(px, py, r, b) {
-    const pts = b.pts;
+    const pts = b.cpts || b.pts;
     const inside = this.pointInPoly(px, py, pts);
     let bestD = Infinity, bx = 0, by = 0, nx = 0, ny = 0;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -101,6 +103,7 @@ const World = {
       const len = cum[cum.length - 1];
       if (len < 30) continue;
       const w = { pts, cum, len, cls: rw.c, name: rw.n, width: this.ROAD_WIDTHS[rw.c] || 28, a: rw.a, b: rw.b };
+      w.idx = this.roadWays.length;
       this.roadWays.push(w);
       const idx = this.roadWays.length - 1;
       if (!this.nodeMap.has(rw.a)) this.nodeMap.set(rw.a, []);
@@ -110,6 +113,12 @@ const World = {
       this.nodePos.set(rw.a, pts[0]);
       this.nodePos.set(rw.b, pts[pts.length - 1]);
     }
+    this.driveWays = this.roadWays.filter(w => w.cls !== 'path');
+    this.bikeWays = this.roadWays.filter(w => !['motorway', 'motorway_link', 'trunk', 'trunk_link'].includes(w.cls));
+    this.driveSet = new Set(this.driveWays.map(w => w.idx));
+    this.mainWays = this.roadWays.filter(w => w.width >= 30);
+    this.mainSet = new Set(this.mainWays.map(w => w.idx));
+    this.buildSegHash();
 
     for (const gn of GEO.greens) {
       const pts = gn.p.map(([lon, lat]) => {
@@ -120,15 +129,20 @@ const World = {
     }
 
     for (const bd of GEO.buildings) {
-      const pts = bd.p.map(([lon, lat]) => {
+      let pts = bd.p.map(([lon, lat]) => {
         const w = this.toWorld(lon, lat);
         return [w.x, w.y];
       });
       if (pts.length < 3) continue;
+      const rcx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+      const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+      if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
+      pts = this.trimToClearance(pts, -6);
+      const cpts = this.trimToClearance(pts, 8, this.mainSet);
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       const col = CFG.PALETTE.building[Math.abs((cx * 13 + cy * 7) | 0) % CFG.PALETTE.building.length];
-      this.buildings.push({ pts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes' });
+      this.buildings.push({ pts, cpts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes' });
     }
 
     let treeBudget = 320;
@@ -160,13 +174,16 @@ const World = {
       if (a > barea) { barea = a; biggest = gn; }
     }
     if (biggest) {
-      const pc = this.pois.plaza;
       let best = null, bd = Infinity;
-      for (let i = 0, j = biggest.pts.length - 1; i < biggest.pts.length; j = i++) {
-        const c = this.segClosest(pc.x, pc.y, biggest.pts[j][0], biggest.pts[j][1], biggest.pts[i][0], biggest.pts[i][1]);
-        if (c.d < bd) { bd = c.d; best = { x: c.cx, y: c.cy }; }
+      for (const w of this.roadWays) {
+        for (const p of w.pts) {
+          for (let i = 0, j = biggest.pts.length - 1; i < biggest.pts.length; j = i++) {
+            const c = this.segClosest(p[0], p[1], biggest.pts[j][0], biggest.pts[j][1], biggest.pts[i][0], biggest.pts[i][1]);
+            if (c.d < bd) { bd = c.d; best = { x: p[0], y: p[1] }; }
+          }
+        }
       }
-      this.forestGate = best || { x: pc.x, y: pc.y - 400 };
+      this.forestGate = best || { x: this.pois.plaza.x, y: this.pois.plaza.y - 400 };
       this.pois.gate = { x: this.forestGate.x, y: this.forestGate.y, label: 'KÄFERTALER WALD' };
     }
     let cem = null;
@@ -205,7 +222,8 @@ const World = {
       }
     };
     this.buildings.forEach((b, i) => {
-      const xs = b.pts.map(p => p[0]), ys = b.pts.map(p => p[1]);
+      const cpts = b.cpts || b.pts;
+      const xs = cpts.map(p => p[0]), ys = cpts.map(p => p[1]);
       put(i, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), false);
     });
     this.trees.forEach((t, i) => put(this.buildings.length + i, t.x - t.r, t.y - t.r, t.x + t.r, t.y + t.r, true));
@@ -234,9 +252,91 @@ const World = {
     return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) };
   },
 
-  newWalker() {
-    const i = (Math.random() * this.roadWays.length) | 0;
-    return { w: i, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * this.roadWays[i].len };
+  buildSegHash() {
+    this.segHash = new Map();
+    for (const w of this.roadWays) {
+      for (let i = 0; i < w.pts.length - 1; i++) {
+        const [ax, ay] = w.pts[i], [bx, by] = w.pts[i + 1];
+        const seg = { ax, ay, bx, by, w: w.width, wi: w.idx };
+        const x0 = Math.min(ax, bx) - 40, x1 = Math.max(ax, bx) + 40;
+        const y0 = Math.min(ay, by) - 40, y1 = Math.max(ay, by) + 40;
+        for (let cx = Math.floor(x0 / this.CELL); cx <= Math.floor(x1 / this.CELL); cx++) {
+          for (let cy = Math.floor(y0 / this.CELL); cy <= Math.floor(y1 / this.CELL); cy++) {
+            const k = cx + ',' + cy;
+            if (!this.segHash.has(k)) this.segHash.set(k, []);
+            this.segHash.get(k).push(seg);
+          }
+        }
+      }
+    }
+  },
+
+  segsNear(x, y, r) {
+    const out = [];
+    for (let cx = Math.floor((x - r) / this.CELL); cx <= Math.floor((x + r) / this.CELL); cx++) {
+      for (let cy = Math.floor((y - r) / this.CELL); cy <= Math.floor((y + r) / this.CELL); cy++) {
+        const c = this.segHash.get(cx + ',' + cy);
+        if (c) for (const s of c) out.push(s);
+      }
+    }
+    return out;
+  },
+
+  onRoadOrWalk(x, y) {
+    if (x < 4 || y < 4 || x > this.W - 4 || y > this.H - 4) return false;
+    for (const s of this.segsNear(x, y, 60)) {
+      if (this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 12) return true;
+    }
+    return false;
+  },
+
+  snapToRoad(x, y) {
+    let best = null, bd = Infinity;
+    for (let r = 60; r <= 3600 && !best; r *= 2) {
+      for (const s of this.segsNear(x, y, r)) {
+        const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
+        if (c.d < bd) { bd = c.d; best = { x: c.cx, y: c.cy }; }
+      }
+    }
+    return best || { x, y };
+  },
+
+  roadClearance(pts, poolSet) {
+    let md = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const ax = pts[j][0], ay = pts[j][1], bx = pts[i][0], by = pts[i][1];
+      const el = Math.hypot(bx - ax, by - ay);
+      const steps = Math.max(1, Math.ceil(el / 30));
+      for (let k = 0; k <= steps; k++) {
+        const mx = ax + (bx - ax) * (k / steps), my = ay + (by - ay) * (k / steps);
+        for (const s of this.segsNear(mx, my, 60)) {
+          if (poolSet && !poolSet.has(s.wi)) continue;
+          const c = this.segClosest(mx, my, s.ax, s.ay, s.bx, s.by);
+          const cl = c.d - s.w / 2;
+          if (cl < md) md = cl;
+        }
+      }
+    }
+    return md;
+  },
+
+  trimToClearance(pts, minCl, poolSet) {
+    if (this.roadClearance(pts, poolSet) >= minCl) return pts;
+    const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+    for (const sc of [0.93, 0.86, 0.79, 0.72, 0.65, 0.58, 0.5]) {
+      const np = pts.map(p => [cx + (p[0] - cx) * sc, cy + (p[1] - cy) * sc]);
+      if (this.roadClearance(np, poolSet) >= minCl) return np;
+    }
+    return pts.map(p => [cx + (p[0] - cx) * 0.5, cy + (p[1] - cy) * 0.5]);
+  },
+
+  newWalker(pool) {
+    pool = pool || this.roadWays;
+    const i = (Math.random() * pool.length) | 0;
+    const w = pool[i];
+    const idx = this.roadWays.indexOf(w);
+    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len };
   },
 
   advanceWalker(wk, dist) {
@@ -267,8 +367,8 @@ const World = {
   laneOff(w) { return Math.max(9, w.width * 0.28); },
   sidewalkOff(w) { return w.width / 2 + 7; },
 
-  randomRoadPoint(sidewalk) {
-    const wk = this.newWalker();
+  randomRoadPoint(sidewalk, pool) {
+    const wk = this.newWalker(pool);
     const w = this.roadWays[wk.w];
     return this.walkerPoint(wk, sidewalk ? this.sidewalkOff(w) : this.laneOff(w));
   },
@@ -342,9 +442,10 @@ const World = {
         if (dx * dx + dy * dy < rr * rr) return true;
       } else {
         const b = this.buildings[e.i];
-        if (this.pointInPoly(x, y, b.pts)) return true;
-        for (let i = 0, j = b.pts.length - 1; i < b.pts.length; j = i++) {
-          if (this.segClosest(x, y, b.pts[j][0], b.pts[j][1], b.pts[i][0], b.pts[i][1]).d < r) return true;
+        const bp = b.cpts || b.pts;
+        if (this.pointInPoly(x, y, bp)) return true;
+        for (let i = 0, j = bp.length - 1; i < bp.length; j = i++) {
+          if (this.segClosest(x, y, bp[j][0], bp[j][1], bp[i][0], bp[i][1]).d < r) return true;
         }
       }
     }
@@ -383,49 +484,6 @@ const World = {
       }
     }
 
-    g.strokeStyle = '#4a4a4a';
-    g.lineWidth = 5;
-    for (const rail of GEO.rails) {
-      const pts = rail.map(([lon, lat]) => this.toWorld(lon, lat));
-      g.beginPath();
-      g.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
-      g.stroke();
-    }
-
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
-    for (const w of this.roadWays) {
-      g.strokeStyle = '#8f939b';
-      g.lineWidth = w.width + 18;
-      this.strokeWay(g, w);
-    }
-    for (const w of this.roadWays) {
-      const big = w.width >= 44;
-      g.strokeStyle = big ? '#2c2f34' : '#33363c';
-      g.lineWidth = w.width;
-      this.strokeWay(g, w);
-    }
-    g.setLineDash([20, 18]);
-    for (const w of this.roadWays) {
-      if (w.width < 22) continue;
-      g.strokeStyle = w.width >= 44 ? '#e8e8e8' : '#d8c84a';
-      g.lineWidth = 3;
-      this.strokeWay(g, w);
-    }
-    g.setLineDash([]);
-    for (const [node, entries] of this.nodeMap) {
-      if (entries.length < 3) continue;
-      const p = this.nodePos.get(node);
-      if (!p) continue;
-      let mw = 0;
-      for (const e of entries) mw = Math.max(mw, this.roadWays[e.w].width);
-      g.fillStyle = '#33363c';
-      g.beginPath();
-      g.arc(p[0], p[1], mw * 0.55, 0, 7);
-      g.fill();
-    }
-
     for (const b of this.buildings) {
       g.fillStyle = this.roofColor(b);
       g.beginPath();
@@ -451,6 +509,57 @@ const World = {
       g.stroke();
     }
 
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    for (const w of this.roadWays) {
+      const isPath = w.cls === 'path';
+      g.strokeStyle = isPath ? '#8a8272' : '#8f939b';
+      g.lineWidth = w.width + (isPath ? 8 : 18);
+      this.strokeWay(g, w);
+    }
+    for (const w of this.roadWays) {
+      const big = w.width >= 44;
+      g.strokeStyle = w.cls === 'path' ? '#6b6357' : big ? '#2c2f34' : '#33363c';
+      g.lineWidth = w.width;
+      this.strokeWay(g, w);
+    }
+    g.setLineDash([20, 18]);
+    for (const w of this.roadWays) {
+      if (w.width < 22) continue;
+      g.strokeStyle = w.width >= 44 ? '#e8e8e8' : '#d8c84a';
+      g.lineWidth = 3;
+      this.strokeWay(g, w);
+    }
+    g.setLineDash([]);
+    for (const [node, entries] of this.nodeMap) {
+      if (entries.length < 3) continue;
+      const p = this.nodePos.get(node);
+      if (!p) continue;
+      let mw = 0;
+      for (const e of entries) mw = Math.max(mw, this.roadWays[e.w].width);
+      g.fillStyle = '#33363c';
+      g.beginPath();
+      g.arc(p[0], p[1], mw * 0.55, 0, 7);
+      g.fill();
+    }
+
+    for (const rail of GEO.rails) {
+      const pts = rail.p.map(([lon, lat]) => this.toWorld(lon, lat));
+      g.lineCap = 'round';
+      g.strokeStyle = '#4a4640';
+      g.lineWidth = 7;
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.stroke();
+      g.strokeStyle = '#d0d0d0';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.stroke();
+    }
+
     for (const t of this.trees) {
       g.fillStyle = '#244a22';
       g.beginPath(); g.arc(t.x, t.y, t.r, 0, 7); g.fill();
@@ -465,7 +574,9 @@ const World = {
       const mid = this.pointAt(w, w.len / 2);
       g.save();
       g.translate(mid.x, mid.y);
-      g.rotate(mid.ang);
+      let la = mid.ang;
+      if (Math.cos(la) < 0) la += Math.PI;
+      g.rotate(la);
       g.font = 'bold 16px Verdana, sans-serif';
       g.fillStyle = 'rgba(0,0,0,0.45)';
       g.fillText(w.name, 1, 5);
@@ -479,10 +590,29 @@ const World = {
       const mid = this.pointAt(w, w.len / 2);
       g.save();
       g.translate(mid.x, mid.y);
-      g.rotate(mid.ang);
+      let la = mid.ang;
+      if (Math.cos(la) < 0) la += Math.PI;
+      g.rotate(la);
       g.font = 'bold 24px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,220,90,0.9)';
       g.fillText(w.name || 'B 38', 0, 8);
+      g.restore();
+    }
+
+    for (const rail of GEO.rails) {
+      if (!rail.n || rail.p.length < 2) continue;
+      const pts = rail.p.map(([lon, lat]) => this.toWorld(lon, lat));
+      const mi = Math.floor(pts.length / 2);
+      const mid = pts[mi];
+      const nxt = pts[Math.min(pts.length - 1, mi + 1)];
+      let a = Math.atan2(nxt.y - mid.y, nxt.x - mid.x);
+      if (Math.cos(a) < 0) a += Math.PI;
+      g.save();
+      g.translate(mid.x, mid.y);
+      g.rotate(a);
+      g.font = 'bold 15px Verdana, sans-serif';
+      g.fillStyle = 'rgba(255,255,255,0.75)';
+      g.fillText('Straßenbahn ' + rail.n, 0, -10);
       g.restore();
     }
 
