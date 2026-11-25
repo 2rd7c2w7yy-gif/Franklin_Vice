@@ -64,15 +64,16 @@ const Game = {
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
-    let sp0 = null;
+    let sp0 = null, ang0 = -Math.PI / 2;
     for (let i = 0; i < 60; i++) {
       const c = World.randomRoadPoint(false, World.roadWays);
       const s = this.safeFootPos(c.x, c.y);
-      if (!World.blocked(s.x, s.y, this.player.r)) { sp0 = s; break; }
+      if (!World.blocked(s.x, s.y, this.player.r)) { sp0 = s; ang0 = c.angle; break; }
     }
     if (!sp0) sp0 = this.safeFootPos(World.pois.plaza.x, World.pois.plaza.y);
     this.player.x = sp0.x;
     this.player.y = sp0.y;
+    this.player.angle = Math.round(ang0 / (Math.PI / 18)) * (Math.PI / 18);
     this.spawnInitial();
     this.cam.x = this.player.x;
     this.cam.y = this.player.y;

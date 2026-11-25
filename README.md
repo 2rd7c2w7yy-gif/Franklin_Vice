@@ -48,6 +48,12 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   zugeschnitten; die echten Namen und Verläufe bleiben erhalten: **George-Washington-Straße,
   George-Sullivan-Ring, James-Monroe-Ring, Thomas-Jefferson-Straße, Franklin-D.-Roosevelt-Straße,
   Abraham-Lincoln-Allee, Robert-Funari-Straße, Columbusstraße, Europa-Achse, Waldstraße …**
+- **Sahle-California-Doppelhäuser am Alten Postweg**: Die Häuser entlang des Alten Postwegs
+  sind in echt einheitliche Doppelhäuser (Typ „California“, Firma Sahle). Im Spiel wird die
+  Häuserzeile danach nachgebaut: gleich große Rechtecke (12,4 m × 8,8 m), Achsabstand ~16 m,
+  beidseits der Straße, 2 Etagen, Satteldach (`roof=gabled`), `bt=semidetached_house`, Name
+  „Sahle California (Doppelhaus)“. In 2D wird bei Satteldächern eine Firstlinie entlang der
+  längsten Kante gezeichnet; in 3D gibt es das passende Giebeldach.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
 - **Straßenbahn exakt auf den realen Schienen**: die neue **Linie 16** (Bensheimer Straße →

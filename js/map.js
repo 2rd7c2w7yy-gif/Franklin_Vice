@@ -643,6 +643,25 @@ const World = {
       for (let i = 1; i < b.pts.length; i++) g.lineTo(b.pts[i][0], b.pts[i][1]);
       g.closePath();
       g.stroke();
+      if (['gabled', 'prism', 'hip', 'pyramidal', 'round', 'onion'].includes(b.roof)) {
+        let bi = 0, bl = 0;
+        for (let i = 0; i < b.pts.length; i++) {
+          const q = b.pts[(i + 1) % b.pts.length];
+          const l = Math.hypot(q[0] - b.pts[i][0], q[1] - b.pts[i][1]);
+          if (l > bl) { bl = l; bi = i; }
+        }
+        if (bl > 8) {
+          const q = b.pts[(bi + 1) % b.pts.length];
+          let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
+          const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+          g.strokeStyle = 'rgba(0,0,0,0.35)';
+          g.lineWidth = 1.5;
+          g.beginPath();
+          g.moveTo(b.cx - dx * bl / 2, b.cy - dy * bl / 2);
+          g.lineTo(b.cx + dx * bl / 2, b.cy + dy * bl / 2);
+          g.stroke();
+        }
+      }
     }
 
     g.lineCap = 'round';
