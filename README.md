@@ -34,6 +34,7 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 | `2` / `3` | 2D-Top-Down / 3D-Modus umschalten |
 | `P` | Pause |
 | `M` | Ton an/aus |
+| `H` | kleine Tastenübersicht im HUD ein-/ausblenden (unten links, immer sichtbar) |
 | `R` | Nach WASTED / BUSTED neu starten |
 | `Enter` | Spiel starten (alternativ beliebige Bewegungs-Taste) |
 | URL-Parameter `?mode=2d` | erzwingt 2D-Modus (z. B. bei WebGL-Problemen) |

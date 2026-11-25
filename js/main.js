@@ -24,6 +24,7 @@ const Game = {
   cam: { x: 0, y: 0, zoom: 1 },
   shake: 0,
   hintT: 0,
+  showKeys: true,
   lastRamCrime: -10,
   sirenNear: false,
   mode: '2d',
@@ -155,6 +156,7 @@ const Game = {
       if (c === 'KeyE' && this.state === 'play') this.tryInteract();
       if (c === 'Key2') this.setMode('2d');
       if (c === 'Key3') this.setMode('3d');
+      if (c === 'KeyH' && this.state === 'play') this.showKeys = !this.showKeys;
     }
   },
 
@@ -993,6 +995,37 @@ const Game = {
       g.font = '13px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,255,255,' + clamp(25 - this.hintT, 0, 1) * 0.75 + ')';
       g.fillText('↑/↓(W/S) = vorwärts/rückwärts · ←/→(A/D) = Figur drehen in 10°-Schritten · im Auto lenken ←/→ · Maus = zielen · F/Klick = schießen · E = Auto/Mission · Leertaste = Handbremse · 2/3 = 2D/3D · P = Pause · M = Ton', 16, vh - 16);
+    }
+
+    if (this.showKeys && this.state === 'play') {
+      const rows = [
+        ['W/S · Pfeile', 'vorwärts / rückwärts'],
+        ['A/D · Pfeile', 'drehen (10°) · Auto: lenken'],
+        ['Maus', 'zielen · ziehen = Kamera (3D)'],
+        ['F / Klick', 'schießen'],
+        ['E', 'Auto / aussteigen / Mission'],
+        ['Leertaste', 'Handbremse (Auto)'],
+        ['2 / 3', '2D / 3D-Modus'],
+        ['P · M · H', 'Pause · Ton · diese Box']
+      ];
+      g.textAlign = 'left';
+      g.font = '12px Verdana, sans-serif';
+      const bw = 252, bh = rows.length * 15 + 24;
+      const bx = 12, by = vh - bh - (this.hintT < 25 ? 24 : 8);
+      g.fillStyle = 'rgba(0,0,0,0.45)';
+      g.fillRect(bx, by, bw, bh);
+      g.strokeStyle = 'rgba(255,255,255,0.25)';
+      g.strokeRect(bx, by, bw, bh);
+      g.fillStyle = '#ffd76a';
+      g.fillText('TASTEN  (H = ausblenden)', bx + 8, by + 15);
+      let ry = by + 30;
+      for (const [k, a] of rows) {
+        g.fillStyle = '#ffffff';
+        g.fillText(k, bx + 8, ry);
+        g.fillStyle = 'rgba(255,255,255,0.8)';
+        g.fillText(a, bx + 104, ry);
+        ry += 15;
+      }
     }
 
     g.textAlign = 'center';
