@@ -161,10 +161,14 @@ const World = {
         return [w.x, w.y];
       });
       if (pts.length < 3) continue;
+      let area = 0;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) area += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1]);
+      if (Math.abs(area / 2) < 120) continue;
       const rcx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
       pts = this.trimToClearance(pts, -6);
+      if (this.roadClearance(pts) < -8) continue;
       let cpts = this.trimToClearance(this.trimToClearance(pts, 4, this.mainSet), -2);
       if (cpts.length && this.roadClearance(cpts) < -2) cpts = [];
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
@@ -180,7 +184,7 @@ const World = {
       const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       const area = (x1 - x0) * (y1 - y0);
       const want = gn.kind === 'forest' ? clamp(Math.round(area / 800), 12, 140) : clamp(Math.round(area / 9000), 3, 12);
-      for (let i = 0; i < want && treeBudget > 0; i++) {
+      for (let i = 0; i < want * 6 && treeBudget > 0; i++) {
         const x = x0 + Math.random() * (x1 - x0), y = y0 + Math.random() * (y1 - y0);
         if (!this.pointInPoly(x, y, gn.pts)) continue;
         const tr = 9 + Math.random() * 7;
@@ -201,6 +205,26 @@ const World = {
       this.pois[pn.k] = { x: rp.x, y: rp.y, label: pn.n };
     }
     this.respawn = { x: this.pois.respawn.x, y: this.pois.respawn.y };
+
+    if (this.pois.plaza) {
+      let bestSpawn = null, bestScore = -1;
+      for (let i = 0; i < 250; i++) {
+        const wk = this.newWalker();
+        const p = this.walkerPoint(wk, 0);
+        if (dist(p.x, p.y, this.pois.plaza.x, this.pois.plaza.y) > 450) continue;
+        let md = Infinity;
+        for (let bi = 0; bi < this.buildings.length; bi++) {
+          const b = this.buildings[bi];
+          const bp = b.cpts || b.pts;
+          for (let k = 0, j = bp.length - 1; k < bp.length; j = k++) {
+            const c = this.segClosest(p.x, p.y, bp[j][0], bp[j][1], bp[k][0], bp[k][1]);
+            if (c.d < md) md = c.d;
+          }
+        }
+        if (md > bestScore) { bestScore = md; bestSpawn = p; }
+      }
+      if (bestSpawn && bestScore > 60) this.pois.plaza = { x: bestSpawn.x, y: bestSpawn.y, label: this.pois.plaza.label };
+    }
 
     let biggest = null, barea = 0;
     for (const gn of this.greens) {
@@ -373,6 +397,18 @@ const World = {
           const cl = c.d - s.w / 2;
           if (cl < md) md = cl;
         }
+      }
+    }
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const rad = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2 + 70;
+    for (const s of this.segsNear(cx, cy, rad)) {
+      if (poolSet && !poolSet.has(s.wi)) continue;
+      const el = Math.hypot(s.bx - s.ax, s.by - s.ay);
+      const steps = Math.max(1, Math.ceil(el / 18));
+      for (let k = 0; k <= steps; k++) {
+        const mx = s.ax + (s.bx - s.ax) * (k / steps), my = s.ay + (s.by - s.ay) * (k / steps);
+        if (this.pointInPoly(mx, my, pts)) { md = Math.min(md, -s.w / 2 - 30); break; }
       }
     }
     return md;
