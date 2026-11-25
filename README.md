@@ -48,17 +48,13 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   zugeschnitten; die echten Namen und Verläufe bleiben erhalten: **George-Washington-Straße,
   George-Sullivan-Ring, James-Monroe-Ring, Thomas-Jefferson-Straße, Franklin-D.-Roosevelt-Straße,
   Abraham-Lincoln-Allee, Robert-Funari-Straße, Columbusstraße, Europa-Achse, Waldstraße …**
-- **Sahle-California-Doppelhäuser am Alten Postweg**: Die Häuser entlang des Alten Postwegs
-  sind in echt einheitliche Doppelhäuser (Typ „California“, Firma Sahle). Im Spiel wird die
-  Häuserzeile danach nachgebaut: gleich große Rechtecke (12,4 m × 8,8 m), Achsabstand ~16 m,
-  beidseits der Straße, 2 Etagen, Satteldach (`roof=gabled`), `bt=semidetached_house`, Name
-  „Sahle California (Doppelhaus)“. In 2D wird bei Satteldächern eine Firstlinie entlang der
-  längsten Kante gezeichnet; in 3D gibt es das passende Giebeldach.
-- **Kartenrand sauber gerahmt**: Die Karte endet an der Franklin-BBox (Straßen werden dort
-  abgeschnitten — gewollt, außerhalb liegt kein kartierter Stadtteil). Damit die Enden nicht
-  abrupt ins Nichts zeigen, liegt um den Rand ein dichter Baumgürtel (außerhalb der Wege,
-  Abstand > r+5 zu jeder Straße/Schiene) und in 3D eine große Wiesenfläche unter der Karte,
-  sodass jenseits des Rands Grün statt Schwarz zu sehen ist.
+- **Sahle-California-Doppelhäuser am Alten Postweg** (Lage per Google Maps geprüft, nur als
+  Referenz — kein Kartenmaterial landet im Spiel): Die Häuser stehen nur auf der **Ostseite**
+  des Alten Postwegs (Westseite = Feld), mit der **Giebelseite zur Straße**. Nachgebaut als
+  einheitliche Rechtecke **10 m (Giebelbreite) × 12 m (Tiefe)**, Achsabstand ~15 m, 2 Etagen,
+  Satteldach (`roof=gabled`, First senkrecht zur Straße), `bt=semidetached_house`, Name
+  „Sahle California (Doppelhaus)“. Alte Grundstücks-Stichwege und Altgebäude im Streifen wurden
+  entfernt. In 2D wird die Firstlinie entlang der längsten Kante gezeichnet; in 3D das Giebeldach.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
 - **Straßenbahn exakt auf den realen Schienen**: die neue **Linie 16** (Bensheimer Straße →
