@@ -253,7 +253,7 @@ const Game = {
       const step = Math.PI / 18;
       if (turnIn === 0 && fwd > 0) {
         const wa = World.wayAt(p.x, p.y, p.angle);
-        if (wa && wa.d < wa.width / 2 + 9) {
+        if (wa && wa.d < wa.width / 2 + 5) {
           const diff = angleDiff(wa.ang, p.angle);
           if (Math.abs(diff) > 0.03) turnIn = diff > 0 ? 1 : -1;
         }

@@ -180,13 +180,13 @@ class Bike {
     this.r = 8;
     this.color = choice(['#d94f4f', '#4f8fd9', '#d9b44f', '#6ac96a', '#c9c9c9', '#e07b39']);
     const w = World.roadWays[this.wk.w];
-    const p = World.walkerPoint(this.wk, Math.max(8, w.width * 0.32));
+    const p = World.walkerPoint(this.wk, Math.max(3, w.width * 0.32));
     this.x = p.x; this.y = p.y; this.angle = p.angle;
   }
   update(dt) {
     World.advanceWalker(this.wk, this.speed * dt);
     const w = World.roadWays[this.wk.w];
-    const p = World.walkerPoint(this.wk, Math.max(8, w.width * 0.32));
+    const p = World.walkerPoint(this.wk, Math.max(3, w.width * 0.32));
     this.x = p.x; this.y = p.y; this.angle = p.angle;
   }
 }

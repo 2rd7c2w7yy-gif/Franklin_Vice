@@ -23,7 +23,7 @@ const World = {
   lampNodes: [],
   collHash: new Map(),
 
-  ROAD_WIDTHS: { motorway: 64, motorway_link: 40, trunk: 60, trunk_link: 40, primary: 48, primary_link: 36, secondary: 44, secondary_link: 34, tertiary: 38, tertiary_link: 32, unclassified: 34, residential: 32, living_street: 30, service: 24, track: 18, path: 13 },
+  ROAD_WIDTHS: { motorway: 20, motorway_link: 13, trunk: 18, trunk_link: 13, primary: 15, primary_link: 11, secondary: 13, secondary_link: 10, tertiary: 11, tertiary_link: 9, unclassified: 10, residential: 9, living_street: 8, service: 7, track: 5, path: 4 },
   segHash: new Map(),
   driveWays: [],
 
@@ -107,7 +107,7 @@ const World = {
       for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
       const len = cum[cum.length - 1];
       if (len < 30) continue;
-      const w = { pts, cum, len, cls: rw.c, name: rw.n, width: this.ROAD_WIDTHS[rw.c] || 28, a: rw.a, b: rw.b };
+      const w = { pts, cum, len, cls: rw.c, name: rw.n, width: this.ROAD_WIDTHS[rw.c] || 8, a: rw.a, b: rw.b };
       w.idx = this.roadWays.length;
       this.roadWays.push(w);
       const idx = this.roadWays.length - 1;
@@ -121,7 +121,7 @@ const World = {
     this.driveWays = this.roadWays.filter(w => w.cls !== 'path');
     this.bikeWays = this.roadWays.filter(w => !['motorway', 'motorway_link', 'trunk', 'trunk_link'].includes(w.cls));
     this.driveSet = new Set(this.driveWays.map(w => w.idx));
-    this.mainWays = this.roadWays.filter(w => w.width >= 30);
+    this.mainWays = this.roadWays.filter(w => w.width >= 11);
     this.mainSet = new Set(this.mainWays.map(w => w.idx));
 
     for (const rw of GEO.rails) {
@@ -167,10 +167,10 @@ const World = {
       const rcx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
-      pts = this.trimToClearance(pts, -6);
+      pts = this.trimToClearance(pts, 1);
       if (this.roadClearance(pts) < -8) continue;
-      let cpts = this.trimToClearance(this.trimToClearance(pts, 4, this.mainSet), -2);
-      if (cpts.length && this.roadClearance(cpts) < -2) cpts = [];
+      let cpts = this.trimToClearance(pts, 11);
+      if (cpts.length && this.roadClearance(cpts) < 11) cpts = [];
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       const col = CFG.PALETTE.building[Math.abs((cx * 13 + cy * 7) | 0) % CFG.PALETTE.building.length];
@@ -344,7 +344,7 @@ const World = {
     let best = null;
     for (const s of this.segsNear(x, y, 70)) {
       const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
-      if (c.d < s.w / 2 + 14 && (!best || c.d < best.d)) {
+      if (c.d < s.w / 2 + 6 && (!best || c.d < best.d)) {
         let ang = Math.atan2(s.by - s.ay, s.bx - s.ax);
         if (Math.cos(ang - (refAngle || 0)) < 0) ang += Math.PI;
         best = { wi: s.wi, ang, d: c.d, width: s.w };
@@ -367,7 +367,7 @@ const World = {
   onRoadOrWalk(x, y) {
     if (x < 4 || y < 4 || x > this.W - 4 || y > this.H - 4) return false;
     for (const s of this.segsNear(x, y, 60)) {
-      if (this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 6) return true;
+      if (this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 3) return true;
     }
     return false;
   },
@@ -464,8 +464,8 @@ const World = {
     return { x: p.x + -Math.sin(a) * off, y: p.y + Math.cos(a) * off, angle: a };
   },
 
-  laneOff(w) { return Math.max(9, w.width * 0.28); },
-  sidewalkOff(w) { return w.width / 2 + 7; },
+  laneOff(w) { return Math.max(3.5, w.width * 0.28); },
+  sidewalkOff(w) { return w.width / 2 + 3; },
 
   randomRoadPoint(sidewalk, pool) {
     const wk = this.newWalker(pool);
@@ -629,19 +629,19 @@ const World = {
     for (const w of this.roadWays) {
       const isPath = w.cls === 'path';
       g.strokeStyle = isPath ? '#8a8272' : '#8f939b';
-      g.lineWidth = w.width + (isPath ? 8 : 18);
+      g.lineWidth = w.width + (isPath ? 3 : 5);
       this.strokeWay(g, w);
     }
     for (const w of this.roadWays) {
-      const big = w.width >= 44;
+      const big = w.width >= 15;
       g.strokeStyle = w.cls === 'path' ? '#6b6357' : big ? '#2c2f34' : '#33363c';
       g.lineWidth = w.width;
       this.strokeWay(g, w);
     }
     g.setLineDash([20, 18]);
     for (const w of this.roadWays) {
-      if (w.width < 22) continue;
-      g.strokeStyle = w.width >= 44 ? '#e8e8e8' : '#d8c84a';
+      if (w.width < 8) continue;
+      g.strokeStyle = w.width >= 15 ? '#e8e8e8' : '#d8c84a';
       g.lineWidth = 3;
       this.strokeWay(g, w);
     }

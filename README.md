@@ -53,6 +53,11 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   Franklin Mitte → Franklinschule → Sullivan, 1,8 km) plus OEG (Linie 5/15) liegen als Schienennetz
   vor; darauf fahren Straßenbahnen (2D + 3D).
 
+- **Realistische Maßstäbe**: Straßen werden in echter Breite gezeichnet (Skala 0,92 px/m —
+  Wohnstraße ≈ 9 px, Hauptstraße ≈ 13–15 px, Fußweg ≈ 4 px), Gehweg-Halo, Mittellinien und
+  Kreuzungsflächen skalieren mit. Dadurch sind die **Abstände zwischen den Gebäuden deutlich
+  größer als die Straßen** selbst; Gebäude werden passend zurückgetrimmt (Kollisionskörper
+  mind. 11 px jenseits jeder Wegkante, damit die Figur überall entlanglaufen kann).
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto), **alle KI-Figuren, Autos, Lastenräder und
   die Polizei** bewegen sich ausschließlich auf Wegen — der begehbare Korridor endet am
   Fahrbahnrand; die Figur startet und respawnt per Snap auf einem echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn
