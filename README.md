@@ -58,6 +58,15 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   Kreuzungsflächen skalieren mit. Dadurch sind die **Abstände zwischen den Gebäuden deutlich
   größer als die Straßen** selbst; Gebäude werden passend zurückgetrimmt (Kollisionskörper
   mind. 11 px jenseits jeder Wegkante, damit die Figur überall entlanglaufen kann).
+- **Fahrzeuge kompakter**: Autos und Straßenbahnen sind auf 0,75× skaliert (Auto 36×18 px,
+  Kollisionsradius 10; Tram 70×19 px) — 2D und 3D.
+- **Tod durch Straßenbahn**: Wer zu Fuß (oder im Auto) von einer Straßenbahn erfasst wird
+  (Körper-Segment der Bahn vs. Spieler), stirbt sofort — „WASTED“-Screen inkl. Blutwolke,
+  Crash-Sound und Screen-Shake. Das Auto wird zerstört.
+- **James-Monroe-Ring bebaut**: 88 in OSM vorhandene, bisher fehlende Gebäude (Ways +
+  Multipolygon-Relation, v. a. Reihenhäuser/Terrassen im Ring) wurden aus OSM ergänzt;
+  die Mindestfläche pro Gebäude wurde von 120 px² auf 28 px² gesenkt, damit auch kleinere
+  Häuser (z. B. im Ring) gerendert werden — der Ring ist jetzt dicht bebaut wie im echten Franklin.
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto), **alle KI-Figuren, Autos, Lastenräder und
   die Polizei** bewegen sich ausschließlich auf Wegen — der begehbare Korridor endet am
   Fahrbahnrand; die Figur startet und respawnt per Snap auf einem echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn

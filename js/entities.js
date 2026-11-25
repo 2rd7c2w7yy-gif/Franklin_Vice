@@ -16,7 +16,7 @@ class Car {
   constructor(x, y, angle, opts) {
     opts = opts || {};
     this.x = x; this.y = y; this.angle = angle;
-    this.w = 48; this.h = 24; this.r = 21; this.colR = 14;
+    this.w = 36; this.h = 18; this.r = 16; this.colR = 10;
     this.vx = 0; this.vy = 0;
     this.health = 100;
     this.type = opts.type || 'civil';
@@ -196,8 +196,8 @@ class Tram {
     this.wk = World.newWalker(World.railWays);
     if (spread) World.advanceWalker(this.wk, spread);
     this.speed = 115;
-    this.len = 96;
-    this.wdt = 26;
+    this.len = 70;
+    this.wdt = 19;
     this.color = choice(['#d8b93c', '#c94f4f', '#4f9dc9']);
     this.ref = '5';
     const p = World.walkerPoint(this.wk, 0);

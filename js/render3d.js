@@ -350,6 +350,7 @@ const Render3D = {
     shadow.position.y = 0.15;
     grp.add(shadow);
     grp.userData = { barRed, barBlue, cone };
+    grp.scale.setScalar(0.75);
     this.scene.add(grp);
     return grp;
   },
@@ -426,6 +427,7 @@ const Render3D = {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.15;
     grp.add(shadow);
+    grp.scale.setScalar(0.75);
     this.scene.add(grp);
     return grp;
   },

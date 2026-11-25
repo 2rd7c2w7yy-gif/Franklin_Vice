@@ -415,6 +415,22 @@ const Game = {
     for (const b of this.bikes) b.update(dt);
     for (const t of this.trams) t.update(dt);
 
+    for (const t of this.trams) {
+      const fx = t.x + Math.cos(t.angle) * t.len / 2, fy = t.y + Math.sin(t.angle) * t.len / 2;
+      const bx = t.x - Math.cos(t.angle) * t.len / 2, by = t.y - Math.sin(t.angle) * t.len / 2;
+      const tc = World.segClosest(p.x, p.y, bx, by, fx, fy);
+      if (tc.d < t.wdt / 2 + (p.inCar ? p.inCar.colR : p.r) - 2 && this.state === 'play') {
+        if (p.inCar) this.explodeCar(p.inCar);
+        else {
+          p.health = 0;
+          bloodBurst(p.x, p.y, 26);
+          SFX.crash(420);
+          this.shake = 18;
+          this.toast('Von der Straßenbahn erfasst!');
+        }
+      }
+    }
+
     for (const b of this.bullets) {
       b.update(dt);
       if (b.dead) continue;

@@ -163,7 +163,7 @@ const World = {
       if (pts.length < 3) continue;
       let area = 0;
       for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) area += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1]);
-      if (Math.abs(area / 2) < 120) continue;
+      if (Math.abs(area / 2) < 28) continue;
       const rcx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
