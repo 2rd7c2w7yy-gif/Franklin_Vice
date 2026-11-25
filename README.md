@@ -67,6 +67,10 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   entlang (achsengetrennte Bewegung, die Kollision verhindert das Eindringen, bevor es passiert,
   und projiziert die Normalgeschwindigkeit heraus), statt in den Kollisionskörper hinein- und
   herauszuspringen; die 2D-Kamera folgt geglättet (Lerp, harter Schnitt nur bei Respawn/Teleport).
+  In 3D bleibt die Kamera außerdem ruckelfrei: geglättetes Kamera-Yaw (die 10°-Drehschritte der Figur
+  whippen die Kamera nicht mehr), Boom-Kollision (die Kamera wird entlang des Auslegers vor jedem
+  Gebäude/Baum zurückgezogen und liegt nie in einem Solid) und ein hartes Limit von 6 px pro Frame
+  Kamerabewegung.
   Straßennamen werden nie spiegelverkehrt gerendert: In 2D sorgt die Drehrichtungs-
   Korrektur (Drehung nur um die Straßenrichtung, ggf. +180°) für lesbare Schilder; in 3D ist die
   Bodentextur korrekt (flipY) auf die Weltkoordinaten abgebildet, sodass Namen nicht gespiegelt

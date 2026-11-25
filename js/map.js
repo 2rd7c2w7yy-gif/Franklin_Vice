@@ -552,6 +552,21 @@ const World = {
     return false;
   },
 
+  insideSolid(x, y) {
+    if (x < 0 || x > this.W || y < 0 || y > this.H) return true;
+    for (const e of this.hashCells(x, y, 1)) {
+      if (e.t) {
+        const t = this.trees[e.i - this.buildings.length];
+        const dx = x - t.x, dy = y - t.y;
+        if (dx * dx + dy * dy < t.r * t.r) return true;
+      } else {
+        const b = this.buildings[e.i];
+        if (this.pointInPoly(x, y, b.cpts || b.pts)) return true;
+      }
+    }
+    return false;
+  },
+
   roofColor(b) {
     if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
       return ['#7a4436', '#6a4a5a', '#4a5a6a', '#5a4632'][Math.abs((b.cx * 7 + b.cy * 3) | 0) % 4];

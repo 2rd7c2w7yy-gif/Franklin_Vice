@@ -570,17 +570,43 @@ const Render3D = {
   updateCamera(dt) {
     const p = Game.player;
     const pe = p.inCar || p;
-    const ang = pe.angle + (this.camYaw || 0);
     const sp = p.inCar ? p.inCar.speedAbs() : Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     const dist = (p.inCar ? 160 : 115) + sp * 0.14;
     const height = (p.inCar ? 88 : 72) + sp * 0.05;
-    const tx = clamp(pe.x - Math.cos(ang) * dist, 60, World.W - 60);
-    const tz = clamp(pe.y - Math.sin(ang) * dist, 60, World.H - 60);
+    const targetAng = pe.angle + (this.camYaw || 0);
+    if (this.camAng == null) this.camAng = targetAng;
+    this.camAng += angleDiff(targetAng, this.camAng) * (1 - Math.pow(0.02, dt));
+    const ang = this.camAng;
+    let boomFree = 24;
+    for (let d = 24; d <= dist; d += 2) {
+      const cx = clamp(pe.x - Math.cos(ang) * d, 60, World.W - 60);
+      const cz = clamp(pe.y - Math.sin(ang) * d, 60, World.H - 60);
+      if (World.insideSolid(cx, cz)) break;
+      boomFree = d;
+    }
+    if (this.boom == null) this.boom = boomFree;
+    this.boom += (boomFree - this.boom) * (1 - Math.pow(0.0004, dt));
+    let tx = clamp(pe.x - Math.cos(ang) * this.boom, 60, World.W - 60);
+    let tz = clamp(pe.y - Math.sin(ang) * this.boom, 60, World.H - 60);
+    if (World.insideSolid(tx, tz)) {
+      tx = clamp(pe.x - Math.cos(ang) * boomFree, 60, World.W - 60);
+      tz = clamp(pe.y - Math.sin(ang) * boomFree, 60, World.H - 60);
+    }
     if (!this.camPos) this.camPos = new THREE.Vector3(tx, height, tz);
+    if (Math.hypot(tx - this.camPos.x, tz - this.camPos.z) > 600) {
+      this.camPos.set(tx, height, tz);
+      this.camAng = targetAng;
+      this.boom = boomFree;
+    }
     const k = 1 - Math.pow(0.0004, dt);
-    this.camPos.x += (tx - this.camPos.x) * k;
+    let mx = (tx - this.camPos.x) * k, mz = (tz - this.camPos.z) * k;
+    const ml = Math.hypot(mx, mz);
+    if (ml > 6) { mx *= 6 / ml; mz *= 6 / ml; }
+    const ox = this.camPos.x, oz = this.camPos.z;
+    this.camPos.x += mx;
+    this.camPos.z += mz;
     this.camPos.y += (height - this.camPos.y) * k;
-    this.camPos.z += (tz - this.camPos.z) * k;
+    if (World.insideSolid(this.camPos.x, this.camPos.z)) { this.camPos.x = ox; this.camPos.z = oz; }
     this.camera.position.copy(this.camPos);
     this.camera.lookAt(pe.x + Math.cos(ang) * 30, 10, pe.y + Math.sin(ang) * 30);
     const fovT = 62 + clamp(sp / CFG.CAR_MAXF, 0, 1) * 16;
