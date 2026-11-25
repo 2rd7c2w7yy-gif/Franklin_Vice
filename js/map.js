@@ -200,6 +200,38 @@ const World = {
       }
     }
 
+    {
+      let beltBudget = 700;
+      const m = this.PAD;
+      const spots = [];
+      for (const row of [30, 48]) {
+        for (let x = m - row; x <= this.W - m + row; x += 18) {
+          spots.push([x + Math.random() * 8, m - row + Math.random() * 10]);
+          spots.push([x + Math.random() * 8, this.H - m + row - Math.random() * 10]);
+        }
+        for (let y = m - row; y <= this.H - m + row; y += 18) {
+          spots.push([m - row + Math.random() * 10, y + Math.random() * 8]);
+          spots.push([this.W - m + row - Math.random() * 10, y + Math.random() * 8]);
+        }
+      }
+      for (const [x, y] of spots) {
+        if (beltBudget <= 0) break;
+        let inGreen = false;
+        for (const gn of this.greens) { if (this.pointInPoly(x, y, gn.pts)) { inGreen = true; break; } }
+        if (inGreen) continue;
+        const tr = 12 + Math.random() * 5;
+        let minCl = Infinity;
+        for (const s of this.segsNear(x, y, 70)) {
+          const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
+          const cl = c.d - s.w / 2;
+          if (cl < minCl) minCl = cl;
+        }
+        if (minCl < tr + 5) continue;
+        this.trees.push({ x, y, r: tr });
+        beltBudget--;
+      }
+    }
+
     for (const pn of GEO.pois) {
       const rp = this.nearestRoadPoint(pn.lon, pn.lat);
       this.pois[pn.k] = { x: rp.x, y: rp.y, label: pn.n };

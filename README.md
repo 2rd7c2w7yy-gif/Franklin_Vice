@@ -54,6 +54,11 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   beidseits der Straße, 2 Etagen, Satteldach (`roof=gabled`), `bt=semidetached_house`, Name
   „Sahle California (Doppelhaus)“. In 2D wird bei Satteldächern eine Firstlinie entlang der
   längsten Kante gezeichnet; in 3D gibt es das passende Giebeldach.
+- **Kartenrand sauber gerahmt**: Die Karte endet an der Franklin-BBox (Straßen werden dort
+  abgeschnitten — gewollt, außerhalb liegt kein kartierter Stadtteil). Damit die Enden nicht
+  abrupt ins Nichts zeigen, liegt um den Rand ein dichter Baumgürtel (außerhalb der Wege,
+  Abstand > r+5 zu jeder Straße/Schiene) und in 3D eine große Wiesenfläche unter der Karte,
+  sodass jenseits des Rands Grün statt Schwarz zu sehen ist.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
 - **Straßenbahn exakt auf den realen Schienen**: die neue **Linie 16** (Bensheimer Straße →

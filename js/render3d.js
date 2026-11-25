@@ -83,6 +83,13 @@ const Render3D = {
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(W / 2, 0, H / 2);
     this.scene.add(ground);
+    const under = new THREE.Mesh(
+      new THREE.PlaneGeometry(W * 4, H * 4),
+      new THREE.MeshLambertMaterial({ color: 0x77894f })
+    );
+    under.rotation.x = -Math.PI / 2;
+    under.position.set(W / 2, -0.8, H / 2);
+    this.scene.add(under);
 
     this.facadeTexs = [0, 1, 2].map(v => {
       const t = this.makeFacadeTexture(v);
