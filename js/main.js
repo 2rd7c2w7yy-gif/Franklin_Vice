@@ -63,7 +63,7 @@ const Game = {
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
-    const sp0 = World.snapToRoad(this.player.x, this.player.y);
+    const sp0 = this.safeFootPos(this.player.x, this.player.y);
     this.player.x = sp0.x;
     this.player.y = sp0.y;
     this.spawnInitial();
@@ -158,13 +158,27 @@ const Game = {
     }
   },
 
+  safeFootPos(x, y) {
+    const r = this.player.r;
+    const sp = World.snapToRoad(x, y);
+    if (World.onRoadOrWalk(sp.x, sp.y) && !World.blocked(sp.x, sp.y, r)) return sp;
+    for (let ring = 1; ring <= 8; ring++) {
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const s = World.snapToRoad(x + Math.cos(a) * ring * 14, y + Math.sin(a) * ring * 14);
+        if (World.onRoadOrWalk(s.x, s.y) && !World.blocked(s.x, s.y, r)) return s;
+      }
+    }
+    return sp;
+  },
+
   tryInteract() {
     const p = this.player;
     if (p.inCar) {
       const car = p.inCar;
       const f = car.forward();
       const rx = -f.y, ry = f.x;
-      const sp = World.snapToRoad(car.x + rx * 34, car.y + ry * 34);
+      const sp = this.safeFootPos(car.x + rx * 34, car.y + ry * 34);
       p.x = sp.x;
       p.y = sp.y;
       p.inCar = null;
@@ -266,12 +280,25 @@ const Game = {
       p.vy *= Math.max(0, 1 - 6 * dt);
       const nx = p.x + p.vx * dt;
       const ny = p.y + p.vy * dt;
-      if (World.onRoadOrWalk(nx, ny)) { p.x = nx; p.y = ny; } else { p.vx = 0; p.vy = 0; }
+      if (World.onRoadOrWalk(nx, p.y) && !World.blocked(nx, p.y, p.r)) p.x = nx; else p.vx = 0;
+      if (World.onRoadOrWalk(p.x, ny) && !World.blocked(p.x, ny, p.r)) p.y = ny; else p.vy = 0;
       const hit = World.collideCircle(p.x, p.y, p.r);
       if (hit) {
         const hx = p.x + hit.x, hy = p.y + hit.y;
-        if (World.onRoadOrWalk(hx, hy)) { p.x = hx; p.y = hy; p.vx *= 0.2; p.vy *= 0.2; }
-        else { p.vx = 0; p.vy = 0; }
+        if (World.onRoadOrWalk(hx, hy) && !World.blocked(hx, hy, p.r - 0.5)) { p.x = hx; p.y = hy; }
+        else {
+          const pl = Math.hypot(hit.x, hit.y);
+          if (pl > 0.01) {
+            const ux = hit.x / pl, uy = hit.y / pl;
+            for (let s = pl; s > 0; s -= 1) {
+              const qx = p.x + ux * s, qy = p.y + uy * s;
+              if (World.onRoadOrWalk(qx, qy) && !World.blocked(qx, qy, p.r - 0.5)) { p.x = qx; p.y = qy; break; }
+            }
+          }
+        }
+        const vn = p.vx * hit.nx + p.vy * hit.ny;
+        if (vn < 0) { p.vx -= vn * hit.nx; p.vy -= vn * hit.ny; }
+        p.vx *= 0.55; p.vy *= 0.55;
       }
     }
 
@@ -453,8 +480,12 @@ const Game = {
     this.cam.zoom = lerp(this.cam.zoom, targetZoom, 1 - Math.pow(0.001, dt));
     const z = this.cam.zoom;
     const vw = this.vw / z, vh = this.vh / z;
-    this.cam.x = vw >= World.W ? World.W / 2 : clamp(pe.x, vw / 2, World.W - vw / 2);
-    this.cam.y = vh >= World.H ? World.H / 2 : clamp(pe.y, vh / 2, World.H - vh / 2);
+    const tx = vw >= World.W ? World.W / 2 : clamp(pe.x, vw / 2, World.W - vw / 2);
+    const ty = vh >= World.H ? World.H / 2 : clamp(pe.y, vh / 2, World.H - vh / 2);
+    if (Math.abs(tx - this.cam.x) > 500 || Math.abs(ty - this.cam.y) > 500) { this.cam.x = tx; this.cam.y = ty; }
+    const ck = 1 - Math.pow(0.0001, dt);
+    this.cam.x += (tx - this.cam.x) * ck;
+    this.cam.y += (ty - this.cam.y) * ck;
 
     SFX.setEngine(!!p.inCar, p.inCar ? p.inCar.speedF() / CFG.CAR_MAXF : 0, p.inCar ? clamp(Math.abs(p.inCar.speedF()) / CFG.CAR_MAXF, 0, 1) : 0);
     SFX.updateSiren(this.sirenNear && this.state === 'play', dt);
@@ -526,7 +557,7 @@ const Game = {
 
   respawn() {
     const p = this.player;
-    const sp = World.snapToRoad(World.respawn.x, World.respawn.y);
+    const sp = this.safeFootPos(World.respawn.x, World.respawn.y);
     p.x = sp.x;
     p.y = sp.y;
     p.vx = 0; p.vy = 0;

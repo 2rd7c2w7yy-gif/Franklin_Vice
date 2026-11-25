@@ -63,6 +63,10 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   Schiene erzwungen. Die **Startposition wird dynamisch gewählt**: Weg-Punkt in Franklin Mitte
   (max. 450 px um den Plaza-POI) mit dem größten Abstand zu allen Gebäuden — der Start-View ist
   nicht von einem Gebäude blockiert.
+  **Kein Ruckeln an Gebäuden mehr**: Steht die Figur direkt an einer Wand, gleitet sie jetzt an ihr
+  entlang (achsengetrennte Bewegung, die Kollision verhindert das Eindringen, bevor es passiert,
+  und projiziert die Normalgeschwindigkeit heraus), statt in den Kollisionskörper hinein- und
+  herauszuspringen; die 2D-Kamera folgt geglättet (Lerp, harter Schnitt nur bei Respawn/Teleport).
   Straßennamen werden nie spiegelverkehrt gerendert: In 2D sorgt die Drehrichtungs-
   Korrektur (Drehung nur um die Straßenrichtung, ggf. +180°) für lesbare Schilder; in 3D ist die
   Bodentextur korrekt (flipY) auf die Weltkoordinaten abgebildet, sodass Namen nicht gespiegelt
