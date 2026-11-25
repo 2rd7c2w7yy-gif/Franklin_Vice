@@ -64,7 +64,13 @@ const Game = {
       health: 100, cash: 150, stars: 0,
       inCar: null, fireCd: 0, lastCrime: -100, decayT: 0
     };
-    const sp0 = this.safeFootPos(this.player.x, this.player.y);
+    let sp0 = null;
+    for (let i = 0; i < 60; i++) {
+      const c = World.randomRoadPoint(false, World.roadWays);
+      const s = this.safeFootPos(c.x, c.y);
+      if (!World.blocked(s.x, s.y, this.player.r)) { sp0 = s; break; }
+    }
+    if (!sp0) sp0 = this.safeFootPos(World.pois.plaza.x, World.pois.plaza.y);
     this.player.x = sp0.x;
     this.player.y = sp0.y;
     this.spawnInitial();
@@ -85,12 +91,17 @@ const Game = {
         if (this.state === 'play' && !this.paused) this.update(dt);
         this.render();
       } catch (err) {
-        this._errCount = (this._errCount || 0) + 1;
-        if (!this._errLogged) { this._errLogged = true; if (typeof console !== 'undefined') console.error(err); }
-        if (this.mode === '3d' && this._errCount > 5) {
-          Render3D.available = false;
-          this.setMode('2d');
-          this.toast('3D-Renderfehler — automatischer Fallback auf 2D (?mode=2d erzwingt 2D)');
+        if (this.mode === '3d') {
+          this._errCount = (this._errCount || 0) + 1;
+          if (!this._errLogged) { this._errLogged = true; if (typeof console !== 'undefined') console.error(err); }
+          if (this._errCount > 30) {
+            Render3D.available = false;
+            this.setMode('2d');
+            this.toast('3D-Renderfehler — Fallback auf 2D (Taste 3 versucht 3D erneut)');
+          }
+        } else {
+          this._errCount = 0;
+          if (!this._errLogged2) { this._errLogged2 = true; if (typeof console !== 'undefined') console.error(err); }
         }
       }
       requestAnimationFrame(loop);
@@ -107,14 +118,18 @@ const Game = {
   },
 
   setMode(m, silent) {
+    if (m === '3d' && !Render3D.available && !window.__TEST__) {
+      try { Render3D.init(); } catch (e) { Render3D.available = false; }
+    }
     if (m === '3d' && !Render3D.available) {
       this.mode = '2d';
-      if (!silent) this.toast('WebGL nicht verfügbar — 2D-Modus aktiv');
+      if (!silent) this.toast('WebGL nicht verfügbar — bleibe in 2D (Taste 2/3 wechselt)');
     } else {
       this.mode = m;
     }
     if (this.glCanvas) this.glCanvas.style.display = this.mode === '3d' ? 'block' : 'none';
-    if (!silent) this.toast(this.mode === '3d' ? '3D-Modus — Taste 2 für 2D-Top-Down' : '2D-Modus — Taste 3 für 3D');
+    if (!silent && this.mode === '3d') this.toast('3D-Modus — Taste 2 für 2D-Top-Down');
+    if (!silent && this.mode === '2d' && m === '2d') this.toast(Render3D.available ? '2D-Modus — Taste 3 für 3D' : '2D-Modus (WebGL nicht verfügbar)');
   },
 
   spawnInitial() {
@@ -146,7 +161,8 @@ const Game = {
     if (down && !e.repeat) {
       SFX.init();
       SFX.ensure();
-      if (this.state === 'title' && (c === 'Enter' || ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyF'].includes(c))) {
+      const MODS = ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'CapsLock', 'Tab', 'Escape'];
+      if (this.state === 'title' && !MODS.includes(c)) {
         this.state = 'play';
         this.toast('Willkommen in FRANKLIN! Finde den gelben Marker.');
       }
@@ -237,7 +253,7 @@ const Game = {
       });
       p.x = car.x; p.y = car.y; p.angle = car.angle;
       const impact = car.collideWorld();
-      if (!World.onRoadOrWalk(car.x, car.y)) {
+      if (!World.onDrive(car.x, car.y)) {
         car.x = ox; car.y = oy; car.vx = 0; car.vy = 0;
         p.x = car.x; p.y = car.y;
       }
@@ -317,6 +333,12 @@ const Game = {
         if (dist(probeX, probeY, pe.x, pe.y) < 34) blockedByPlayer = true;
         if (!blockedByPlayer) car.followRoad(dt);
         else { car.vx = 0; car.vy = 0; }
+      } else {
+        car.vx = 0; car.vy = 0;
+        if (!World.onDrive(car.x, car.y)) {
+          const sp = World.snapToDrive(car.x, car.y);
+          car.x = sp.x; car.y = sp.y;
+        }
       }
     }
 
@@ -324,10 +346,10 @@ const Game = {
     while (this.police.length < desired) {
       let pt = null;
       for (let tries = 0; tries < 12; tries++) {
-        const cand = World.randomRoadPoint(14);
+        const cand = World.randomRoadPoint(false, World.driveWays);
         if (dist(cand.x, cand.y, p.x, p.y) > 900) { pt = cand; break; }
       }
-      if (!pt) pt = World.randomRoadPoint(14);
+      if (!pt) pt = World.randomRoadPoint(false, World.driveWays);
       this.police.push(new Car(pt.x, pt.y, pt.angle, { type: 'police', color: '#20242e', ai: false, aiSpeed: 300 }));
     }
     this.police = this.police.filter(c => !c.dead);
@@ -337,7 +359,7 @@ const Game = {
       const pox = pc.x, poy = pc.y;
       const res = pc.chase(dt, p.inCar || p, 14);
       const impact = pc.collideWorld();
-      if (!World.onRoadOrWalk(pc.x, pc.y)) { pc.x = pox; pc.y = poy; pc.vx = 0; pc.vy = 0; }
+      if (!World.onDrive(pc.x, pc.y)) { pc.x = pox; pc.y = poy; pc.vx = 0; pc.vy = 0; }
       if (impact > 260) { SFX.crash(impact); sparkBurst(pc.x, pc.y, 8); pc.health -= impact / 70; if (pc.health <= 0) { this.explodeCar(pc); this.addCrime(3); } }
       if (res && res.fire) {
         const tgt = p.inCar || p;
@@ -389,8 +411,8 @@ const Game = {
       }
     }
 
-    if (p.inCar && !World.onRoadOrWalk(p.inCar.x, p.inCar.y)) {
-      const sp = World.snapToRoad(p.inCar.x, p.inCar.y);
+    if (p.inCar && !World.onDrive(p.inCar.x, p.inCar.y)) {
+      const sp = World.snapToDrive(p.inCar.x, p.inCar.y);
       p.inCar.x = sp.x; p.inCar.y = sp.y;
       p.x = sp.x; p.y = sp.y;
     }
@@ -1133,6 +1155,9 @@ const Game = {
       '2 = 2D-Top-Down · 3 = 3D (Third-Person) — Vorsicht: ★ bei Verbrechen → WASTED / BUSTED!'
     ];
     lines.forEach((l, i) => g.fillText(l, vw / 2, vh / 2 - 16 + i * 26));
+    g.font = 'bold 15px Verdana, sans-serif';
+    g.fillStyle = '#ffe63c';
+    g.fillText('Modus: ' + (this.mode === '3d' ? '3D (Third-Person)' : '2D-Top-Down') + (Render3D.available ? '' : ' — WebGL nicht verfügbar') + '  ·  Taste 2/3 wechselt', vw / 2, vh / 2 + 116);
     if (Math.floor(this.time * 1.6) % 2 === 0 || this.time < 0.1) {
       g.font = 'bold 26px Verdana, sans-serif';
       g.fillStyle = '#ffe63c';

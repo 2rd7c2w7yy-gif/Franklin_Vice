@@ -372,10 +372,30 @@ const World = {
     return false;
   },
 
+  onDrive(x, y) {
+    if (x < 4 || y < 4 || x > this.W - 4 || y > this.H - 4) return false;
+    for (const s of this.segsNear(x, y, 60)) {
+      if (s.wi >= 0 && this.driveSet.has(s.wi) && this.segClosest(x, y, s.ax, s.ay, s.bx, s.by).d < s.w / 2 + 3) return true;
+    }
+    return false;
+  },
+
   snapToRoad(x, y) {
     let best = null, bd = Infinity;
     for (let r = 60; r <= 3600 && !best; r *= 2) {
       for (const s of this.segsNear(x, y, r)) {
+        const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
+        if (c.d < bd) { bd = c.d; best = { x: c.cx, y: c.cy }; }
+      }
+    }
+    return best || { x, y };
+  },
+
+  snapToDrive(x, y) {
+    let best = null, bd = Infinity;
+    for (let r = 60; r <= 3600 && !best; r *= 2) {
+      for (const s of this.segsNear(x, y, r)) {
+        if (s.wi < 0 || !this.driveSet.has(s.wi)) continue;
         const c = this.segClosest(x, y, s.ax, s.ay, s.bx, s.by);
         if (c.d < bd) { bd = c.d; best = { x: c.cx, y: c.cy }; }
       }
@@ -433,7 +453,8 @@ const World = {
     let ways = this.roadWays;
     if (idx < 0) { idx = this.railWays.indexOf(w); ways = this.railWays; }
     const nm = nodeMap || (ways === this.railWays ? this.railNodeMap : this.nodeMap);
-    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len, ways, nodeMap: nm };
+    const allowed = pool !== ways ? new Set(pool.map(x => ways.indexOf(x))) : null;
+    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len, ways, nodeMap: nm, allowed };
   },
 
   advanceWalker(wk, dist) {
@@ -449,7 +470,7 @@ const World = {
       rem -= space;
       wk.d = target;
       const node = wk.dir > 0 ? way.b : way.a;
-      const opts = (nm.get(node) || []).filter(e => e.w !== wk.w);
+      const opts = (nm.get(node) || []).filter(e => e.w !== wk.w && (!wk.allowed || wk.allowed.has(e.w)));
       if (!opts.length) { wk.dir *= -1; continue; }
       const e = opts[(Math.random() * opts.length) | 0];
       wk.w = e.w;

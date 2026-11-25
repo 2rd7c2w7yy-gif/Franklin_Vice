@@ -75,9 +75,15 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   durch das Innere eines Gebäudes verlaufen; solche Gebäude (und Rand-Splitter <120 px²) werden
   ganz entfernt, statt nur den Kollisionskörper zu leeren. **Bäume stehen nie auf Wegen**: bei der
   Platzierung im Wald/Park wird ein Mindestabstand (Baumradius + 5 px) zu jedem Weg und jeder
-  Schiene erzwungen. Die **Startposition wird dynamisch gewählt**: Weg-Punkt in Franklin Mitte
-  (max. 450 px um den Plaza-POI) mit dem größten Abstand zu allen Gebäuden — der Start-View ist
-  nicht von einem Gebäude blockiert.
+  Schiene erzwungen. Die **Startposition ist Zufall**: ein zufälliger Weg-Punkt irgendwo in Franklin
+  (gesnappt auf einen offiziellen Weg, nie in einem Gebäude) — bei jedem Spielstart woanders.
+- **Autos nur auf Straßen, nie auf Radwegen/Fußwegen**: KI-Autos fahren mit einem Way-Pool
+  (`driveWays`, ohne `path`/cycleway) und dürfen an Knoten **nicht** auf Fuß-/Radwege abbiegen
+  (`allowed`-Set im Walker); Spieler-Auto und Polizei werden per `onDrive()` auf Fahrbahnen
+  gehalten, geparkte Autos snappen per `snapToDrive()` zurück auf die Straße.
+- **2D/3D-Umschalten robust**: Taste `2`/`3` wechselt jederzeit (auch auf dem Titel; beliebige
+  Taste startet das Spiel); `3` versucht bei Bedarf ein erneutes WebGL-Init, der automatische
+  Fallback zählt Renderfehler nur im 3D-Modus und ist per Taste `3` wieder umkehrbar.
   **Kein Ruckeln an Gebäuden mehr**: Steht die Figur direkt an einer Wand, gleitet sie jetzt an ihr
   entlang (achsengetrennte Bewegung, die Kollision verhindert das Eindringen, bevor es passiert,
   und projiziert die Normalgeschwindigkeit heraus), statt in den Kollisionskörper hinein- und
