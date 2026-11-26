@@ -117,7 +117,7 @@ const Render3D = {
       const sideMat = new THREE.MeshLambertMaterial(isCal ? { color: tint } : { map: ftex, color: tint });
       const capCol = World.roofColor(b);
       const capMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) });
-      const mesh = new THREE.Mesh(geo, [sideMat, capMat]);
+      const mesh = new THREE.Mesh(geo, [capMat, sideMat]);
       this.scene.add(mesh);
       if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
         const rshape = new THREE.Shape();
