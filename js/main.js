@@ -94,12 +94,13 @@ const Game = {
     try {
       if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('edit') === '1') {
         const pend = JSON.parse(localStorage.getItem('fve_pending') || 'null');
-        if (pend && pend.facade && pend.facade.wM && pend.facade.dM) {
-          if (!pend.cx || !pend.cy) {
-            const c = World.toWorld(pend.lon || 8.529, pend.lat || 49.52);
+        if (pend && pend.facade && isFinite(pend.facade.wM) && pend.facade.wM > 0 && isFinite(pend.facade.dM) && pend.facade.dM > 0) {
+          if (!isFinite(pend.cx) || !isFinite(pend.cy)) {
+            const c = World.toWorld(isFinite(pend.lon) ? pend.lon : 8.529, isFinite(pend.lat) ? pend.lat : 49.52);
             pend.cx = c.x; pend.cy = c.y;
           }
-          if (!pend.rot && pend.rot !== 0) pend.rot = 0;
+          if (!isFinite(pend.rot)) pend.rot = 0;
+          if (!pend.facade.floors) pend.facade.floors = 2;
           this.editPlace = pend;
           this.state = 'play';
           this.toast('Platzieren: Maus = Position · Q/E = drehen (Shift = 1°) · Enter = speichern · Esc = abbrechen');
@@ -125,8 +126,21 @@ const Game = {
             this.toast('3D-Renderfehler — Fallback auf 2D (Taste 3 versucht 3D erneut)');
           }
         } else {
-          this._errCount = 0;
+          this._errCount2 = (this._errCount2 || 0) + 1;
           if (!this._errLogged2) { this._errLogged2 = true; if (typeof console !== 'undefined') console.error(err); }
+          if (this._errCount2 === 10 && this.ctx) {
+            try {
+              const g = this.ctx;
+              g.setTransform(1, 0, 0, 1, 0, 0);
+              g.fillStyle = 'rgba(120,10,10,0.9)';
+              g.fillRect(0, 0, this.vw, 64);
+              g.fillStyle = '#fff';
+              g.font = '13px monospace';
+              g.textAlign = 'left';
+              g.fillText('Render-Fehler: ' + err.message, 10, 24);
+              g.fillText(((err.stack || '').split('\n')[1] || ''), 10, 46);
+            } catch (e2) {}
+          }
         }
       }
       requestAnimationFrame(loop);
@@ -274,7 +288,10 @@ const Game = {
     this.time += dt;
     this.hintT += dt;
     this.dayT = (this.dayT + dt / CFG.DAY_LENGTH) % 1;
-    if (this.editPlace) { this.updateEditPlace(dt); return; }
+    if (this.editPlace) {
+      try { this.updateEditPlace(dt); } catch (e) { this.editPlace = null; this.toast('Editor-Fehler: ' + e.message); }
+      return;
+    }
     const p = this.player;
     p.fireCd -= dt;
 
@@ -836,7 +853,10 @@ const Game = {
       g.setTransform(1, 0, 0, 1, 0, 0);
     }
 
-    if (this.editPlace && this.mode === '2d') this.drawEditGhost(g);
+    if (this.editPlace && this.mode === '2d') {
+      try { this.drawEditGhost(g); } catch (e) { this.editPlace = null; this.toast('Editor-Fehler: ' + e.message); }
+    }
+    this.drawCustomPreview(g);
 
     this.drawHUD(g);
     this.drawMinimap(g);
@@ -928,6 +948,43 @@ const Game = {
     g.fillText('🛠 ' + (ep.name || 'Eigenes Gebäude') + ' — ' + (ep.facade.wM | 0) + '×' + (ep.facade.dM | 0) + ' m, ' + Math.round(ep.rot * 180 / Math.PI) + '°' + (ep.osmName ? ' · OSM: ' + ep.osmName : ''), vw / 2, vh - 68);
     g.fillStyle = cl >= 0.5 ? '#7dff6a' : '#ff8080';
     g.fillText('Maus = Position · Q/E = drehen (Shift = 1°) · Enter = speichern · Esc = abbrechen · Abstand zur Straße: ' + cl.toFixed(1) + ' px', vw / 2, vh - 44);
+  },
+
+  drawCustomPreview(g) {
+    if (this.mode !== '2d' || typeof FacadeLib === 'undefined') return;
+    const z = this.cam.zoom || 1;
+    const mx = (this.mouse.x - this.vw / 2) / z + this.cam.x;
+    const my = (this.mouse.y - this.vh / 2) / z + this.cam.y;
+    let best = null, bd = 46 * 46;
+    for (const b of World.buildings) {
+      if (!b.facade) continue;
+      const d = (b.cx - mx) * (b.cx - mx) + (b.cy - my) * (b.cy - my);
+      if (d < bd) { bd = d; best = b; }
+    }
+    if (!best) return;
+    if (!this._prevCache) this._prevCache = new Map();
+    const key = JSON.stringify(best.facade);
+    if (!this._prevCache.has(key)) {
+      const cv = document.createElement('canvas');
+      cv.width = 220; cv.height = 380;
+      try { FacadeLib.drawPreview(cv.getContext('2d'), best.facade, 12, 46, 196, (best.cx | 0)); } catch (e) {}
+      this._prevCache.set(key, cv);
+      if (this._prevCache.size > 10) this._prevCache.clear();
+    }
+    const cv = this._prevCache.get(key);
+    let sx = this.mouse.x + 18, sy = this.mouse.y - 200;
+    sx = Math.max(4, Math.min(this.vw - 230, sx));
+    sy = Math.max(4, Math.min(this.vh - 240, sy));
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = 'rgba(0,0,0,0.78)';
+    g.fillRect(sx - 6, sy - 24, 232, 232);
+    g.strokeStyle = 'rgba(125,255,106,0.6)';
+    g.strokeRect(sx - 6, sy - 24, 232, 232);
+    g.drawImage(cv, sx, sy, 220, 200);
+    g.fillStyle = '#7dff6a';
+    g.font = 'bold 13px Verdana, sans-serif';
+    g.textAlign = 'left';
+    g.fillText(best.name || 'Eigenes Gebäude', sx, sy - 9);
   },
 
   drawOverlays(g) {
@@ -1376,5 +1433,22 @@ const Game = {
 };
 
 if (typeof window !== 'undefined' && !window.__TEST__) {
-  Game.init();
+  try {
+    Game.init();
+  } catch (e) {
+    try {
+      const c = document.getElementById('game');
+      c.width = window.innerWidth; c.height = window.innerHeight;
+      const g = c.getContext('2d');
+      g.fillStyle = '#0b0b14';
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#ff5050';
+      g.font = 'bold 18px monospace';
+      g.textAlign = 'left';
+      g.fillText('Fehler beim Start: ' + e.message, 20, 40);
+      g.font = '13px monospace';
+      g.fillStyle = '#ffb0b0';
+      g.fillText(((e.stack || '').split('\n').slice(0, 8).join('\n')), 20, 70);
+    } catch (e2) {}
+  }
 }

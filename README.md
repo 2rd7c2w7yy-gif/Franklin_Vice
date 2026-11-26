@@ -192,6 +192,15 @@ Ablauf:
 
 Dateien: `editor.html`, `js/editor.js`, `js/facade.js`.
 
+Robustheit: Start- und Render-Fehler werden nicht mehr als schwarzer Bildschirm angezeigt,
+sondern als rote Fehlermeldung auf dem Canvas (Init-Fehler) bzw. Fehler-Banner im Loop.
+Der Platzier-Modus ist per try/catch abgesichert (bei Fehler zurück ins normale Spiel) und
+ akzeptiert nur valide Pending-Daten. In der 2D-Karte zeigt ein **Hover über ein eigenes Gebäude**
+eine Vorschau-Karte mit der erkannten Ansicht (Dachform, Fenster, Türen an ihren Positionen).
+Die Analyse erkennt Fenster/Türen als helle **und** dunkle Flächen (verglichen mit der
+Fassaden-Helligkeit), mergt nur Komponenten derselben Reihe und fällt bei Fehlern auf
+sichere Standardwerte zurück.
+
 ## Referenz-Fotos aus Franklin (ohne Anzeige im Spiel)
 
 Fotos aus Franklin (eigene, mit EXIF-GPS) werden **nicht im Spiel angezeigt**.

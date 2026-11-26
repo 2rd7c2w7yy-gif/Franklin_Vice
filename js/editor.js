@@ -205,7 +205,7 @@ const Editor = {
       for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) { fm += gray[y * W + x]; fn++; }
       fm = fn ? fm / fn : 128;
       const dark = new Uint8Array(W * H);
-      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) if (gray[y * W + x] < fm - 20) dark[y * W + x] = 1;
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) { const gv = gray[y * W + x]; if (Math.abs(gv - fm) > 28 && gv < 246) dark[y * W + x] = 1; }
       const seen = new Uint8Array(W * H);
       const comps = [];
       for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
@@ -227,12 +227,12 @@ const Editor = {
           }
         }
         const cw = maxX - minX + 1, ch = maxY - minY + 1;
-        if (cw >= 5 && ch >= 7 && area >= 20 && cw <= facW * 0.6 && ch <= facH * 0.95) comps.push({ minX, maxX, minY, maxY, w: cw, h: ch, area });
+        if (cw >= Math.max(5, facW * 0.02) && ch >= Math.max(7, facH * 0.04) && area >= 20 && cw <= facW * 0.6 && ch <= facH * 0.95) comps.push({ minX, maxX, minY, maxY, w: cw, h: ch, area });
       }
-      for (let m = 0; m < 3; m++) {
+      for (let m = 0; m < 4; m++) {
         for (let i = 0; i < comps.length; i++) for (let j = i + 1; j < comps.length; j++) {
           const a = comps[i], b = comps[j];
-          if (a.minX - 3 <= b.maxX && b.minX - 3 <= a.maxX && a.minY - 3 <= b.maxY && b.minY - 3 <= a.maxY) {
+          if (a.minX - 4 <= b.maxX && b.minX - 4 <= a.maxX && a.maxY >= b.minY - 2 && b.maxY >= a.minY - 2) {
             a.minX = Math.min(a.minX, b.minX); a.maxX = Math.max(a.maxX, b.maxX);
             a.minY = Math.min(a.minY, b.minY); a.maxY = Math.max(a.maxY, b.maxY);
             a.w = a.maxX - a.minX + 1; a.h = a.maxY - a.minY + 1; a.area += b.area;
@@ -305,6 +305,7 @@ const Editor = {
         roofShape = 'flat';
       }
     }
+    if (openings && !openings.length) openings = null;
     return { facade, roofColor, floors, wins, doors, openings, roofShape, isDach, wM: 15, dM: 8, hM: floors * 3, roofVis, bWidthPx, roofDepthPx };
   },
 
@@ -408,7 +409,12 @@ const Editor = {
         } else info += '\n📍 Kein EXIF-GPS im Foto — Ausrichtung manuell in der Karte (oder OSM-Grundriss per Hand)';
         document.getElementById('info').textContent = info;
         const mode = document.getElementById('pMode').value;
-        Editor.params = Editor.analyze(img, mode === 'auto' ? 'auto' : mode);
+        try {
+          Editor.params = Editor.analyze(img, mode === 'auto' ? 'auto' : mode);
+        } catch (e) {
+          Editor.params = { facade: '#d4c9b8', roofColor: '#6a4a3a', floors: 3, wins: 3, doors: 1, openings: null, roofShape: 'flat', isDach: false, wM: 15, dM: 8, hM: 9, roofVis: false, bWidthPx: 0, roofDepthPx: 0 };
+          info += '\n⚠ Analyse fehlgeschlagen (' + e.message + ') — Werte manuell setzen';
+        }
         document.getElementById('pFloors').value = Editor.params.floors;
         document.getElementById('pWins').value = Editor.params.wins;
         document.getElementById('pDoors').value = Editor.params.doors;
@@ -460,7 +466,11 @@ const Editor = {
     for (const id of ['pName', 'pW', 'pD', 'pFloors', 'pWins', 'pDoors', 'pRoofShape', 'pFacade', 'pRoof', 'pMode', 'pAngle']) {
       document.getElementById(id).addEventListener('input', () => {
         if (id === 'pMode' && Editor.img) {
-          Editor.params = Editor.analyze(Editor.img, document.getElementById('pMode').value);
+          try {
+            Editor.params = Editor.analyze(Editor.img, document.getElementById('pMode').value);
+          } catch (e) {
+            Editor.params = { facade: '#d4c9b8', roofColor: '#6a4a3a', floors: 3, wins: 3, doors: 1, openings: null, roofShape: 'flat', isDach: false, wM: 15, dM: 8, hM: 9, roofVis: false, bWidthPx: 0, roofDepthPx: 0 };
+          }
           document.getElementById('pFloors').value = Editor.params.floors;
           document.getElementById('pWins').value = Editor.params.wins;
           document.getElementById('pDoors').value = Editor.params.doors;
