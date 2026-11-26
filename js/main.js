@@ -434,6 +434,17 @@ const Game = {
       }
     }
 
+    for (const c of allCars) {
+      if (c.dead || !c.ai || !c.wk || c === p.inCar) continue;
+      if (!World.onDrive(c.x, c.y)) {
+        const cw = World.roadWays[c.wk.w];
+        if (cw && World.driveSet.has(c.wk.w)) {
+          const wp = World.walkerPoint(c.wk, World.laneOff(cw));
+          c.x = wp.x; c.y = wp.y;
+        }
+      }
+    }
+
     if (p.inCar && !World.onDrive(p.inCar.x, p.inCar.y)) {
       const sp = World.snapToDrive(p.inCar.x, p.inCar.y);
       p.inCar.x = sp.x; p.inCar.y = sp.y;

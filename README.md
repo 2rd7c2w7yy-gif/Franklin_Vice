@@ -64,9 +64,13 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   plus **Dachterrasse Nord und Süd, je 2 m** (helle Streifen an den Schmalseiten). Besonders
   detailliert und **alle mit identischem Design**, als **Staffelgeschoss**: 3 Etagen, die **oberste Etage
   ist je 2 m kürzer** (Nord/Süd zurückgesetzt) — die **Dachterrassen sind Aussparungen im Dachgeschoss**
-  (hell gepflastert, je 2 m an Nord/Süd, ohne Geländer/Attika). In 3D: beige Putzfassade mit je einer
-  Fensterreihe pro Etage (3 Fenster pro Längsseite) und brauner Haustür, nur die Dachfläche grün; in 2D:
-  grünes Dach mit dunklerer, zurückgesetzter Dachfläche der obersten Etage + helle Terrassenstreifen an den Enden.
+  (hell gepflastert, je 2 m an Nord/Süd, ohne Geländer/Attika und **ohne jegliche Stangen/Boxen auf dem Dach**).
+  Das **südlichste Haus steht an der vom Nutzer lila markierten Stelle** (Screenshot → Welt-Koordinate),
+  in voller Größe und ohne Weg im Inneren. In 3D: beige Putzfassade mit je einer
+  Fensterreihe pro Etage (3 Fenster pro Längsseite, 3 im Staffelgeschoss) und brauner Haustür,
+  nur die Dachfläche grün; das **Staffelgeschoss ist als eigener Körper an Nord UND Süd je 2 m
+  zurückgesetzt** (dessen Fenster sitzen an den zurückgesetzten Wänden); in 2D:
+  grünes Dach mit dunklerer, zurückgesetzter Dachfläche der obersten Etage + helle Terrassenstreifen an Nord/Süd.
   Name: „Sahle California · James-Monroe-Ring“.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
@@ -86,6 +90,15 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   mind. 11 px jenseits jeder Wegkante, damit die Figur überall entlanglaufen kann).
 - **Fahrzeuge kompakter**: Autos und Straßenbahnen sind auf 0,75× skaliert (Auto 36×18 px,
   Kollisionsradius 10; Tram 70×19 px) — 2D und 3D.
+- **In der 3D-Ansicht sind Figuren und Fahrzeuge kleiner**: Fußgänger/Lastenräder 0,7×, Autos/Straßenbahnen 0,6×
+  (Mesh-Skalierung in `render3d.js`).
+- **Alle Figuren und Fahrzeuge laufen mit halber Geschwindigkeit**: Spieler 118 px/s (vorher 235),
+  KI-Autos max. 270/95 px/s, Fußgänger 22–38 px/s, Lastenräder 30–50 px/s, Straßenbahn 58 px/s.
+- **KI-Figuren laufen nicht mehr ständig im Kreis**: Der Walker merkt sich die letzten 8 Wege (`mem`),
+  meidet Wiederholungen und quittiert Sackgassen/kleine Ringe nach wenigen Fehlversuchen mit einem
+  Respawn auf einem anderen verbundenen Weg (statt endlos hin- und herzulaufen).
+- **KI-Autos bleiben nach Auto-Crashs auf der Straße**: Werden zwei Autos auseinandergedrückt, snappen
+  KI-Autos sofort zurück auf ihren Fahrstreifen-Punkt (`walkerPoint`) und landen nie außerhalb der Fahrbahn.
 - **Tod durch Straßenbahn**: Wer zu Fuß (oder im Auto) von einer Straßenbahn erfasst wird
   (Körper-Segment der Bahn vs. Spieler), stirbt sofort — „WASTED“-Screen inkl. Blutwolke,
   Crash-Sound und Screen-Shake. Das Auto wird zerstört.

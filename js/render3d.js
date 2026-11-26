@@ -147,15 +147,18 @@ const Render3D = {
         const ux = dx, uy = dy, nx = -uy, ny = ux;
         const t = 2 * 0.92;
         const hLow = 6.3, hTop = h3 - hLow;
-        const blU = Math.max(2, bl - 2 * t);
+        const ys4 = b.pts.slice(0, 4).map(p => p[1]);
+        const extY = Math.max(...ys4) - Math.min(...ys4);
+        const cyMin = Math.min(...ys4), cyMax = Math.max(...ys4);
         const shapeU = new THREE.Shape();
-        b.pts.slice(0, 4).forEach((p, i) => {
+        const upPts = b.pts.slice(0, 4).map(p => [p[0], b.cy + Math.max(cyMin + t - b.cy, Math.min(cyMax - t - b.cy, p[1] - b.cy))]);
+        let blU = 0;
+        upPts.forEach((p, i) => {
           const rx = p[0] - b.cx, ry = p[1] - b.cy;
-          const relU = rx * ux + ry * uy, relN = rx * nx + ry * ny;
-          const cu = Math.max(-(bl / 2 - t), Math.min(bl / 2 - t, relU));
-          const px = b.cx + ux * cu + nx * relN, py = b.cy + uy * cu + ny * relN;
-          if (i === 0) shapeU.moveTo(px, -py); else shapeU.lineTo(px, -py);
+          blU = Math.max(blU, Math.abs(rx * ux + ry * uy));
+          if (i === 0) shapeU.moveTo(p[0], -p[1]); else shapeU.lineTo(p[0], -p[1]);
         });
+        blU = Math.max(2, blU * 2);
         const geoU = new THREE.ExtrudeGeometry(shapeU, { depth: hTop, bevelEnabled: false, curveSegments: 2 });
         geoU.rotateX(-Math.PI / 2);
         const upper = new THREE.Mesh(geoU, [capMat, sideMat]);
@@ -180,7 +183,7 @@ const Render3D = {
           }
           for (const wx of wxsU) {
             const win = new THREE.Mesh(wgeo, winMat);
-            win.position.set(wx, hLow + 1.55, sgn * (bs / 2 + 0.07));
+            win.position.set(wx, hLow + 1.55, sgn * (bs / 2 - t + 0.07));
             tg.add(win);
           }
           for (const wy of [1.55, 4.6]) {
@@ -189,18 +192,12 @@ const Render3D = {
             tg.add(wside);
           }
           const wsideU = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 1.15), winMat);
-          wsideU.position.set(sgn * (blU / 2 + t + 0.07), hLow + 1.55, 0);
+          wsideU.position.set(sgn * (blU / 2 + 0.07), hLow + 1.55, 0);
           tg.add(wsideU);
         }
         const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.14), doorMat);
         door.position.set(0, 1.05, bs / 2 + 0.07);
         tg.add(door);
-        const slabMat = new THREE.MeshLambertMaterial({ color: 0xb5ad9c });
-        for (const sgn of [1, -1]) {
-          const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.16, bs - 0.3), slabMat);
-          slab.position.set(sgn * (bl / 2 - t / 2), hLow + 0.08, 0);
-          tg.add(slab);
-        }
         this.scene.add(tg);
       }
     }
@@ -428,7 +425,7 @@ const Render3D = {
     shadow.position.y = 0.15;
     grp.add(shadow);
     grp.userData = { barRed, barBlue, cone };
-    grp.scale.setScalar(0.75);
+    grp.scale.setScalar(0.6);
     this.scene.add(grp);
     return grp;
   },
@@ -455,6 +452,7 @@ const Render3D = {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.15;
     grp.add(shadow);
+    grp.scale.setScalar(0.7);
     this.scene.add(grp);
     return grp;
   },
@@ -505,7 +503,7 @@ const Render3D = {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.15;
     grp.add(shadow);
-    grp.scale.setScalar(0.75);
+    grp.scale.setScalar(0.6);
     this.scene.add(grp);
     return grp;
   },
@@ -522,6 +520,7 @@ const Render3D = {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.15;
     grp.add(shadow);
+    grp.scale.setScalar(0.7);
     this.scene.add(grp);
     return grp;
   },

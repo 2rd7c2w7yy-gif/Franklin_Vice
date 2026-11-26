@@ -135,7 +135,7 @@ class Ped {
     this.r = 9;
     this.angle = rand(0, Math.PI * 2);
     this.dir = choice([0, Math.PI / 2, Math.PI, -Math.PI / 2]);
-    this.speed = rand(45, 75);
+    this.speed = rand(22, 38);
     this.state = 'walk';
     this.fleeT = 0;
     this.fleeX = 0; this.fleeY = 0;
@@ -176,7 +176,7 @@ class Ped {
 class Bike {
   constructor() {
     this.wk = World.newWalker(World.bikeWays);
-    this.speed = rand(60, 100);
+    this.speed = rand(30, 50);
     this.r = 8;
     this.color = choice(['#d94f4f', '#4f8fd9', '#d9b44f', '#6ac96a', '#c9c9c9', '#e07b39']);
     const w = World.roadWays[this.wk.w];
@@ -195,7 +195,7 @@ class Tram {
   constructor(spread) {
     this.wk = World.newWalker(World.railWays);
     if (spread) World.advanceWalker(this.wk, spread);
-    this.speed = 115;
+    this.speed = 58;
     this.len = 70;
     this.wdt = 19;
     this.color = choice(['#d8b93c', '#c94f4f', '#4f9dc9']);

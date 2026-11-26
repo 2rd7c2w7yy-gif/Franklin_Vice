@@ -479,14 +479,22 @@ const World = {
 
   newWalker(pool, nodeMap) {
     pool = pool || this.roadWays;
-    const i = (Math.random() * pool.length) | 0;
-    const w = pool[i];
-    let idx = this.roadWays.indexOf(w);
     let ways = this.roadWays;
-    if (idx < 0) { idx = this.railWays.indexOf(w); ways = this.railWays; }
-    const nm = nodeMap || (ways === this.railWays ? this.railNodeMap : this.nodeMap);
+    let nm = nodeMap || this.nodeMap;
+    const isRail = pool !== ways && pool.some(x => this.railWays.indexOf(x) >= 0);
+    if (isRail) { ways = this.railWays; nm = nodeMap || this.railNodeMap; }
     const allowed = pool !== ways ? new Set(pool.map(x => ways.indexOf(x))) : null;
-    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len, ways, nodeMap: nm, allowed };
+    let pick = (Math.random() * pool.length) | 0;
+    for (let tries = 0; tries < 10; tries++) {
+      const w = pool[pick];
+      const a = nm.get(w.a), b = nm.get(w.b);
+      if (a && b && a.length >= 2 && b.length >= 2) break;
+      pick = (Math.random() * pool.length) | 0;
+    }
+    const w = pool[pick];
+    let idx = ways.indexOf(w);
+    if (idx < 0) idx = 0;
+    return { w: idx, dir: Math.random() < 0.5 ? 1 : -1, d: Math.random() * w.len, ways, nodeMap: nm, allowed, lastW: -1, bounces: 0, mem: [] };
   },
 
   advanceWalker(wk, dist) {
@@ -502,10 +510,34 @@ const World = {
       rem -= space;
       wk.d = target;
       const node = wk.dir > 0 ? way.b : way.a;
-      const opts = (nm.get(node) || []).filter(e => e.w !== wk.w && (!wk.allowed || wk.allowed.has(e.w)));
-      if (!opts.length) { wk.dir *= -1; continue; }
+      const all = (nm.get(node) || []).filter(e => (!wk.allowed || wk.allowed.has(e.w)));
+      wk.mem = wk.mem || [];
+      const memSet = new Set(wk.mem);
+      let opts = all.filter(e => e.w !== wk.w && e.w !== wk.lastW && !memSet.has(e.w));
+      let stuck = false;
+      if (!opts.length) { opts = all.filter(e => e.w !== wk.w && e.w !== wk.lastW); stuck = opts.length > 0; }
+      if (!opts.length) { opts = all.filter(e => e.w !== wk.w); stuck = opts.length > 0; }
+      if (!opts.length) {
+        wk.bounces = (wk.bounces || 0) + 1;
+        if (wk.bounces > 2) {
+          const nw = this.newWalker(ways === this.railWays ? this.railWays : (wk.allowed ? [...wk.allowed].map(i => ways[i]) : ways), nm);
+          wk.w = nw.w; wk.dir = nw.dir; wk.d = nw.d; wk.lastW = -1; wk.bounces = 0; wk.mem = [];
+        } else {
+          wk.dir *= -1;
+        }
+        continue;
+      }
+      if (stuck) wk.bounces = (wk.bounces || 0) + 1; else wk.bounces = 0;
+      if (wk.bounces > 3) {
+        const nw = this.newWalker(ways === this.railWays ? this.railWays : (wk.allowed ? [...wk.allowed].map(i => ways[i]) : ways), nm);
+        wk.w = nw.w; wk.dir = nw.dir; wk.d = nw.d; wk.lastW = -1; wk.bounces = 0; wk.mem = [];
+        continue;
+      }
       const e = opts[(Math.random() * opts.length) | 0];
+      wk.lastW = wk.w;
       wk.w = e.w;
+      wk.mem.push(wk.w);
+      if (wk.mem.length > 8) wk.mem.shift();
       if (e.end === 'a') { wk.dir = 1; wk.d = 0; } else { wk.dir = -1; wk.d = ways[e.w].len; }
     }
   },
@@ -661,33 +693,49 @@ const World = {
       g.closePath();
       g.fill();
       if ((b.name || '').includes('California')) {
-        let bi = 0, bl = 0, bs = 0;
-        for (let i = 0; i < b.pts.length; i++) {
-          const q = b.pts[(i + 1) % b.pts.length];
-          const l = Math.hypot(q[0] - b.pts[i][0], q[1] - b.pts[i][1]);
-          if (l > bl) { bl = l; bi = i; } else if (l > bs) bs = l;
-        }
-        const q = b.pts[(bi + 1) % b.pts.length];
-        let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
-        const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
         const t = 2 * this.s;
-        g.fillStyle = 'rgba(190,225,170,0.95)';
-        for (const sgn of [1, -1]) {
-          g.save();
-          g.translate(b.cx + dx * sgn * (bl / 2 - t / 2), b.cy + dy * sgn * (bl / 2 - t / 2));
-          g.rotate(Math.atan2(dy, dx));
-          g.fillRect(-t / 2, -bs / 2, t, bs);
-          g.restore();
+        const ys = b.pts.map(p => p[1]);
+        const yMin = Math.min(...ys), yMax = Math.max(...ys);
+        const clipY = (poly, lo, hi) => {
+          let out = poly.slice();
+          for (const [keepLo, bound] of [[true, lo], [false, hi]]) {
+            const res = [];
+            for (let i = 0; i < out.length; i++) {
+              const a = out[i], c = out[(i + 1) % out.length];
+              const ain = keepLo ? a[1] >= bound : a[1] <= bound;
+              const cin = keepLo ? c[1] >= bound : c[1] <= bound;
+              if (ain) res.push(a);
+              if (ain !== cin) {
+                const f = (bound - a[1]) / (c[1] - a[1]);
+                res.push([a[0] + (c[0] - a[0]) * f, bound]);
+              }
+            }
+            out = res;
+          }
+          return out;
+        };
+        const fillPoly = (poly, style) => {
+          if (poly.length < 3) return;
+          g.fillStyle = style;
+          g.beginPath();
+          g.moveTo(poly[0][0], poly[0][1]);
+          for (let i = 1; i < poly.length; i++) g.lineTo(poly[i][0], poly[i][1]);
+          g.closePath();
+          g.fill();
+        };
+        fillPoly(clipY(b.pts, -1e9, yMin + t), 'rgba(190,225,170,0.95)');
+        fillPoly(clipY(b.pts, yMax - t, 1e9), 'rgba(190,225,170,0.95)');
+        const inner = clipY(b.pts, yMin + t, yMax - t);
+        fillPoly(inner, 'rgba(25,60,20,0.38)');
+        if (inner.length >= 3) {
+          g.strokeStyle = 'rgba(0,0,0,0.45)';
+          g.lineWidth = 1;
+          g.beginPath();
+          g.moveTo(inner[0][0], inner[0][1]);
+          for (let i = 1; i < inner.length; i++) g.lineTo(inner[i][0], inner[i][1]);
+          g.closePath();
+          g.stroke();
         }
-        g.save();
-        g.translate(b.cx, b.cy);
-        g.rotate(Math.atan2(dy, dx));
-        g.fillStyle = 'rgba(25,60,20,0.38)';
-        g.fillRect(-(bl / 2 - t), -bs / 2 + 0.4, bl - 2 * t, bs - 0.8);
-        g.strokeStyle = 'rgba(0,0,0,0.45)';
-        g.lineWidth = 1;
-        g.strokeRect(-(bl / 2 - t), -bs / 2 + 0.4, bl - 2 * t, bs - 0.8);
-        g.restore();
       }
       g.fillStyle = 'rgba(0,0,0,0.16)';
       g.beginPath();
