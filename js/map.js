@@ -15,6 +15,7 @@ const World = {
   railNodeMap: new Map(),
   railNodePos: new Map(),
   greens: [],
+  labelCanvas: null,
   buildings: [],
   trees: [],
   pois: {},
@@ -167,8 +168,8 @@ const World = {
       const rcx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const rcy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       if (this.roadClearance([[rcx, rcy]], this.mainSet) < -6) continue;
-      pts = this.trimToClearance(pts, 1);
-      if (this.roadClearance(pts) < -8) continue;
+      pts = this.trimToClearance(pts, 0.5);
+      if (this.roadClearance(pts) < 0.5) continue;
       let cpts = this.trimToClearance(pts, 11);
       if (cpts.length && this.roadClearance(cpts) < 11) cpts = [];
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
@@ -844,6 +845,11 @@ const World = {
       g.beginPath(); g.arc(t.x - t.r * 0.25, t.y - t.r * 0.25, t.r * 0.55, 0, 7); g.fill();
     }
 
+    this.labelCanvas = document.createElement('canvas');
+    this.labelCanvas.width = this.W;
+    this.labelCanvas.height = this.H;
+    {
+    const g = this.labelCanvas.getContext('2d');
     g.textAlign = 'center';
     for (const w of this.roadWays) {
       if (!w.name || w.len < 160) continue;
@@ -945,6 +951,7 @@ const World = {
         g.fillRect(p.x - 30, p.y - 12, 60, 20);
         g.strokeStyle = '#5a1f14'; g.lineWidth = 2; g.strokeRect(p.x - 30, p.y - 12, 60, 20);
       }
+    }
     }
   },
 

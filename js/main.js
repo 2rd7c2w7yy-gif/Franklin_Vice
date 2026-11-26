@@ -759,6 +759,7 @@ const Game = {
     const z = this.cam.zoom;
     g.setTransform(z, 0, 0, z, vw / 2 - this.cam.x * z + shx, vh / 2 - this.cam.y * z + shy);
     g.drawImage(World.canvas, 0, 0);
+    if (World.labelCanvas) g.drawImage(World.labelCanvas, 0, 0);
     this.drawMarkers(g);
     const drawables = [];
     for (const ped of this.peds) if (!ped.dead) drawables.push({ y: ped.y, f: () => this.drawPed(g, ped) });
