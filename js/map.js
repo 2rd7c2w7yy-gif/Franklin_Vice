@@ -621,6 +621,7 @@ const World = {
   },
 
   roofColor(b) {
+    if ((b.name || '').includes('California')) return '#4f7a38';
     if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
       return ['#7a4436', '#6a4a5a', '#4a5a6a', '#5a4632'][Math.abs((b.cx * 7 + b.cy * 3) | 0) % 4];
     }
@@ -659,6 +660,26 @@ const World = {
       for (let i = 1; i < b.pts.length; i++) g.lineTo(b.pts[i][0], b.pts[i][1]);
       g.closePath();
       g.fill();
+      if ((b.name || '').includes('California')) {
+        let bi = 0, bl = 0, bs = 0;
+        for (let i = 0; i < b.pts.length; i++) {
+          const q = b.pts[(i + 1) % b.pts.length];
+          const l = Math.hypot(q[0] - b.pts[i][0], q[1] - b.pts[i][1]);
+          if (l > bl) { bl = l; bi = i; } else if (l > bs) bs = l;
+        }
+        const q = b.pts[(bi + 1) % b.pts.length];
+        let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
+        const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+        const t = 2 * this.s;
+        g.fillStyle = 'rgba(190,225,170,0.95)';
+        for (const sgn of [1, -1]) {
+          g.save();
+          g.translate(b.cx + dx * sgn * (bl / 2 - t / 2), b.cy + dy * sgn * (bl / 2 - t / 2));
+          g.rotate(Math.atan2(dy, dx));
+          g.fillRect(-t / 2, -bs / 2, t, bs);
+          g.restore();
+        }
+      }
       g.fillStyle = 'rgba(0,0,0,0.16)';
       g.beginPath();
       for (let i = 0; i < b.pts.length; i++) {

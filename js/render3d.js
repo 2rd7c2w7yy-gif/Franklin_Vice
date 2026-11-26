@@ -99,13 +99,14 @@ const Render3D = {
     });
     for (const b of World.buildings) {
       const bxs = b.pts.map(p => p[0]), bys = b.pts.map(p => p[1]);
-      if ((Math.max(...bxs) - Math.min(...bxs)) * (Math.max(...bys) - Math.min(...bys)) < 700) continue;
+      const isCal = (b.name || '').includes('California');
+      if (!isCal && (Math.max(...bxs) - Math.min(...bxs)) * (Math.max(...bys) - Math.min(...bys)) < 700) continue;
       const shape = new THREE.Shape();
       b.pts.forEach(([x, y], i) => {
         if (i === 0) shape.moveTo(x, -y);
         else shape.lineTo(x, -y);
       });
-      const h3 = b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48);
+      const h3 = isCal ? 9.2 : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48));
       const geo = new THREE.ExtrudeGeometry(shape, { depth: h3, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
       const tint = new THREE.Color(b.color);
@@ -131,6 +132,39 @@ const Render3D = {
         const roofMesh = new THREE.Mesh(rgeo, new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) }));
         roofMesh.position.y = h3;
         this.scene.add(roofMesh);
+      }
+      if (isCal) {
+        let bi = 0, bl = 0, bs = 0;
+        for (let i = 0; i < b.pts.length; i++) {
+          const q = b.pts[(i + 1) % b.pts.length];
+          const l = Math.hypot(q[0] - b.pts[i][0], q[1] - b.pts[i][1]);
+          if (l > bl) { bl = l; bi = i; } else if (l > bs) bs = l;
+        }
+        const q = b.pts[(bi + 1) % b.pts.length];
+        let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
+        const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+        const tg = new THREE.Group();
+        tg.position.set(b.cx, h3, b.cy);
+        tg.rotation.y = Math.atan2(-dy, dx);
+        const slabMat = new THREE.MeshLambertMaterial({ color: 0x9a8a70 });
+        const railMat = new THREE.MeshLambertMaterial({ color: 0x777d85 });
+        const parMat = new THREE.MeshLambertMaterial({ color: 0x8a8f96 });
+        const t = 2 * 0.92;
+        for (const sgn of [1, -1]) {
+          const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.35, bs), slabMat);
+          slab.position.set(sgn * (bl / 2 - t / 2), 0.17, 0);
+          tg.add(slab);
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, bs), railMat);
+          rail.position.set(sgn * (bl / 2 - 0.15), 0.55, 0);
+          tg.add(rail);
+        }
+        const pA = new THREE.Mesh(new THREE.BoxGeometry(bl, 0.7, 0.3), parMat);
+        pA.position.set(0, 0.35, bs / 2 - 0.15); tg.add(pA);
+        const pB = pA.clone(); pB.position.z = -(bs / 2 - 0.15); tg.add(pB);
+        const pC = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, bs), parMat);
+        pC.position.set(bl / 2 - 0.15, 0.35, 0); tg.add(pC);
+        const pD = pC.clone(); pD.position.x = -(bl / 2 - 0.15); tg.add(pD);
+        this.scene.add(tg);
       }
     }
 
