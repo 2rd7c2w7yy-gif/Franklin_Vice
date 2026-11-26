@@ -109,7 +109,9 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 - **Nur offizielle Wege**: Spieler (zu Fuß und im Auto), **alle KI-Figuren, Autos, Lastenräder und
   die Polizei** bewegen sich ausschließlich auf Wegen — der begehbare Korridor endet am
   Fahrbahnrand; die Figur startet und respawnt per Snap auf einem echten Weg. Gebäude, die in OSM auf Straßen liegen, werden entfernt bzw. von der Fahrbahn
-  weggetrimmt. **Gebäude stehen nie auf Wegen**: `roadClearance` erkennt jetzt auch Wege, die
+  weggetrimmt. - **Beschriftungen nicht mehr störend in der 3D-Ansicht**: Alle Text-Labels (Straßennamen, B 38/A 6, Straßenbahn, FRANKLIN/KÄFERTAL, POI-Schilder) werden auf einen eigenen Layer (`World.labelCanvas`) gezeichnet und nur in der **2D-Ansicht** über die Karte gelegt. Die 3D-Grundtextur (`World.canvas`) enthält **keine Schrift** mehr — in 3D sieht man nur die reine Karte (Neon-Schilder an Gebäudefassaden bleiben als 3D-Sprites erhalten).
+- **Keine Gebäude mehr auf Straßenrändern**: Nach dem Zuschneiden müssen Gebäude jetzt mindestens **0,5 px Abstand** zur Fahrbahnkante haben, sonst werden sie verworfen (vorher durften sie bis zu 8 px auf die Straße ragen — in 3D sahen das wie auf der Fahrbahn liegende Blöcke aus).
+**Gebäude stehen nie auf Wegen**: `roadClearance` erkennt jetzt auch Wege, die
   durch das Innere eines Gebäudes verlaufen; solche Gebäude (und Rand-Splitter <120 px²) werden
   ganz entfernt, statt nur den Kollisionskörper zu leeren. **Bäume stehen nie auf Wegen**: bei der
   Platzierung im Wald/Park wird ein Mindestabstand (Baumradius + 5 px) zu jedem Weg und jeder
