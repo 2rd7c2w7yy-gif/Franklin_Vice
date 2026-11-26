@@ -872,7 +872,7 @@ const Game = {
     const pts = this.editGhostPts(ep);
     const ll = pts.map(q => World.toLonLat(q[0], q[1]));
     ll.push(ll[0].slice());
-    const rec = { p: ll, n: ep.name || 'Eigenes Gebäude', lvl: 0, roof: ep.facade.roofShape === 'gabled' ? 'gabled' : 'flat', bt: 'yes', facade: ep.facade };
+    const rec = { p: ll, n: ep.name || 'Eigenes Gebäude', lvl: 0, roof: ['flat', 'gabled', 'hip', 'pyramidal'].includes(ep.facade.roofShape) ? ep.facade.roofShape : 'flat', bt: 'yes', facade: ep.facade };
     let edits = [];
     try { edits = JSON.parse(localStorage.getItem('fve_edits') || '[]') || []; } catch (e) {}
     if (!Array.isArray(edits)) edits = [];

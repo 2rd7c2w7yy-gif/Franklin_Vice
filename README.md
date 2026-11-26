@@ -169,12 +169,15 @@ Ablauf:
 1. **Foto/Screenshot hochladen** (eigenes Foto mit EXIF-GPS oder Screenshot aus einer Karten-App als Dachaufsicht).
    Das Foto selbst wird **nicht im Spiel angezeigt und nicht gespeichert** — nur abgeleitete Werte
    (Etagen, Fenster, Türen, Fassaden-/Dachfarbe, Maße). Bitte keine Google/Apple-StreetView-Bilder verwenden (ToS).
-2. **Analyse**: Das Modul liest EXIF-GPS (eigener Parser) und analysiert Schrägfotos (typisch ca. 30° von vorn/oben,
-   Fassade UND Dach sichtbar): Es findet Gebäudetop und Traufe per Kantenerkennung (Sobel) — alles darüber ist das
-   **sichtbare Dach** (Dachfarbe + Dachhöhe in Pixeln), darunter die **Fassade** mit Etagen (waagerechte Kanten),
-   Fenstern pro Etage (senkrechte Kanten) und Tür (dunkler Bereich unten). Aus Dachhöhe/Hausbreite und dem
-   Kamerawinkel wird die **Tiefe geschätzt** (Tiefe ≈ Dachhöhe / sin(Winkel) × Breite) — anpassbar. Dazu
-   Auto-Erkennung „Schräg-/Seitenansicht“ vs. „Dachaufsicht“.
+2. **Analyse** (nicht vorlagenbasiert, sondern **einzeln pro Öffnung**): Das Modul liest EXIF-GPS (eigener Parser) und analysiert
+   Schrägfotos (typisch ca. 30° von vorn/oben, Fassade UND Dach sichtbar). Per Kantenerkennung (Sobel) werden Gebäudetop und
+   Traufe gefunden — darüber das **sichtbare Dach**, darunter die **Fassade**. In der Fassade werden **Fenster und Türen einzeln
+   als Rechtecke erkannt** (Dunkelmaske + Connected Components, normalized auf die Fassadenfläche, Typ „win“/„door“) — nicht nur
+   „N pro Etage im Raster“; Etagen ergeben sich aus den Fensterreihen. Die **Dachform wird aus der Dach-Silhouette klassifiziert**:
+   dünne Kante = Flachdach, Dreieck/kurze Firstkante = Satteldach, **Trapez = Walmdach**, Spitze = Pyramidendach (per Select
+   jederzeit manuell änderbar). Dachfarbe + Dachhöhe kommen aus der sichtbaren Dachfläche; aus Dachhöhe/Hausbreite und dem
+   Kamerawinkel wird die **Tiefe geschätzt** (≈ Dachhöhe / sin(Winkel) × Breite). Die Vorschau und die 3D-Fassadentextur zeichnen
+   die Öffnungen an ihren **individuellen Positionen**. Dazu Auto-Erkennung „Schräg-/Seitenansicht“ vs. „Dachaufsicht“.
    Alle Werte sind per Regler nachträglich anpassbar; Vorschau zeigt die entstehende Grafik.
 3. **OSM-Abgleich**: Liegt EXIF-GPS vor, wird das nächstgelegene OSM-Gebäude in `geodata.js` gesucht —
    per Klick übernimmt das Modul dessen **Ausrichtung** (Winkel der längsten Kante) und optional

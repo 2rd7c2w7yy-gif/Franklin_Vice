@@ -163,52 +163,149 @@ const Editor = {
       const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
       return '#' + hex(r) + hex(gg) + hex(b);
     };
-    let floors, wins, doors, roofColor, facade, roofVis = false, bWidthPx = W, roofDepthPx = 0;
+    let floors, wins, doors, roofColor, facade, roofVis = false, bWidthPx = W, roofDepthPx = 0, roofShape = 'flat', openings = null;
     if (isDach) {
       floors = 1; wins = 0; doors = 0;
       facade = '#cfcfcf';
       roofColor = avg(0.1, 0.9, 0.1, 0.9);
     } else {
       const rowMax = Math.max(...rs);
-      let bTop = Math.round(H * 0.2), topV = 0;
-      for (let y = Math.floor(H * 0.04); y < Math.floor(H * 0.62); y++) if (rs[y] > topV) { topV = rs[y]; bTop = y; }
+      const z0 = Math.floor(H * 0.04), z1 = Math.floor(H * 0.62);
+      const zone = new Float32Array(z1 - z0);
+      for (let y = z0; y < z1; y++) zone[y - z0] = rs[y];
+      const topPks = peaks(zone, Math.max(8, Math.round(H / 12)), 0.5);
+      let bTop = topPks.length ? z0 + topPks[0] : Math.round(H * 0.2);
+      if (!topPks.length) {
+        let topV = 0;
+        for (let y = z0; y < z1; y++) if (rs[y] > topV) { topV = rs[y]; bTop = y; }
+      }
       let eave = -1, eaveV = 0;
-      for (let y = bTop + 6; y < Math.min(H - 2, bTop + (H - bTop) * 0.65); y++) if (rs[y] > eaveV) { eaveV = rs[y]; eave = y; }
+      if (topPks.length >= 2 && z0 + topPks[1] <= bTop + (H - bTop) * 0.65) {
+        eave = z0 + topPks[1];
+        eaveV = rs[eave];
+      } else {
+        for (let y = bTop + 6; y < Math.min(H - 2, bTop + (H - bTop) * 0.65); y++) if (rs[y] > eaveV) { eaveV = rs[y]; eave = y; }
+      }
       const hasEave = eave > bTop && eaveV > rowMax * 0.22 && (eave - bTop) >= 5;
       let fBot = H - 2, fbV = 0;
       for (let y = Math.floor(H * 0.62); y < H - 1; y++) if (rs[y] > fbV) { fbV = rs[y]; fBot = y; }
       const facTop = hasEave ? eave + 3 : bTop + 3;
       const facBot = Math.max(facTop + 8, fBot - 2);
-      const facRows = [];
-      for (let y = facTop; y <= facBot; y++) facRows.push(rs[y]);
-      const fPks = peaks(new Float32Array(facRows), Math.max(9, Math.round(H / 9)), 0.4);
-      floors = Math.max(2, Math.min(8, fPks.length + 1));
       let band = new Float32Array(W);
       for (let x = 1; x < W - 1; x++) for (let y = facTop; y <= facBot; y++) band[x] += Math.abs(gxm[y * W + x]);
       const bs = smooth(band, 2);
       const winPks = peaks(bs, Math.max(6, Math.round(W / 24)), 0.3);
-      wins = Math.max(1, Math.min(8, Math.round(winPks.length / 2)));
       const strong = [];
       for (const p of winPks) if (bs[p] > Math.max(...bs) * 0.35) strong.push(p);
-      bWidthPx = strong.length >= 2 ? Math.max(...strong) - Math.min(...strong) : W * 0.8;
-      let darkCols = 0;
-      const dTop = fBot - (fBot - facTop) * 0.28;
-      for (let x = Math.floor(W * 0.3); x < Math.ceil(W * 0.7); x++) {
-        let m = 0, n = 0;
-        for (let y = Math.max(0, Math.round(dTop)); y < H - 1; y++) { m += gray[y * W + x]; n++; }
-        if (n && m / n < stats(gray).mean - 28) darkCols++;
+      const bLeft = strong.length >= 2 ? Math.min(...strong) : Math.floor(W * 0.1);
+      const bRight = strong.length >= 2 ? Math.max(...strong) : Math.ceil(W * 0.9);
+      bWidthPx = Math.max(10, bRight - bLeft);
+      const facW = bWidthPx, facH = facBot - facTop;
+      let fm = 0, fn = 0;
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) { fm += gray[y * W + x]; fn++; }
+      fm = fn ? fm / fn : 128;
+      const dark = new Uint8Array(W * H);
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) if (gray[y * W + x] < fm - 20) dark[y * W + x] = 1;
+      const seen = new Uint8Array(W * H);
+      const comps = [];
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
+        const si = y * W + x;
+        if (!dark[si] || seen[si]) continue;
+        let minX = x, maxX = x, minY = y, maxY = y, area = 0;
+        const stack = [si];
+        seen[si] = 1;
+        while (stack.length) {
+          const q = stack.pop();
+          const qx = q % W, qy = Math.floor(q / W);
+          area++;
+          if (qx < minX) minX = qx; if (qx > maxX) maxX = qx; if (qy < minY) minY = qy; if (qy > maxY) maxY = qy;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = qx + dx, ny = qy + dy;
+            if (nx < bLeft || nx > bRight || ny < facTop || ny > facBot) continue;
+            const ni = ny * W + nx;
+            if (dark[ni] && !seen[ni]) { seen[ni] = 1; stack.push(ni); }
+          }
+        }
+        const cw = maxX - minX + 1, ch = maxY - minY + 1;
+        if (cw >= 5 && ch >= 7 && area >= 20 && cw <= facW * 0.6 && ch <= facH * 0.95) comps.push({ minX, maxX, minY, maxY, w: cw, h: ch, area });
       }
-      doors = darkCols > W * 0.06 ? 2 : 1;
-      facade = avgAbs(W * 0.15, W * 0.85, facTop + (facBot - facTop) * 0.2, facBot - 2);
+      for (let m = 0; m < 3; m++) {
+        for (let i = 0; i < comps.length; i++) for (let j = i + 1; j < comps.length; j++) {
+          const a = comps[i], b = comps[j];
+          if (a.minX - 3 <= b.maxX && b.minX - 3 <= a.maxX && a.minY - 3 <= b.maxY && b.minY - 3 <= a.maxY) {
+            a.minX = Math.min(a.minX, b.minX); a.maxX = Math.max(a.maxX, b.maxX);
+            a.minY = Math.min(a.minY, b.minY); a.maxY = Math.max(a.maxY, b.maxY);
+            a.w = a.maxX - a.minX + 1; a.h = a.maxY - a.minY + 1; a.area += b.area;
+            comps.splice(j, 1);
+            j--;
+          }
+        }
+      }
+      openings = comps.slice(0, 80).map(c => {
+        const isDoor = c.maxY > facBot - facH * 0.3 && c.h >= c.w * 1.4 && c.h >= facH * 0.15;
+        return { x: +((c.minX - bLeft) / facW).toFixed(3), y: +((c.minY - facTop) / facH).toFixed(3), w: +(c.w / facW).toFixed(3), h: +(c.h / facH).toFixed(3), type: isDoor ? 'door' : 'win' };
+      }).sort((a, b) => a.y - b.y || a.x - b.x);
+      if (openings.length) {
+        const winCys = openings.filter(o => o.type === 'win').map(o => o.y + o.h / 2).sort((a, b) => a - b);
+        const cys = winCys.length ? winCys : openings.map(o => o.y + o.h / 2).sort((a, b) => a - b);
+        let groups = 1;
+        for (let i = 1; i < cys.length; i++) if (cys[i] - cys[i - 1] > 0.18) groups++;
+        floors = Math.max(1, Math.min(8, groups));
+        wins = openings.filter(o => o.type === 'win').length;
+        doors = openings.filter(o => o.type === 'door').length;
+      } else {
+        const facRows = [];
+        for (let y = facTop; y <= facBot; y++) facRows.push(rs[y]);
+        const fPks = peaks(new Float32Array(facRows), Math.max(9, Math.round(H / 9)), 0.4);
+        floors = Math.max(2, Math.min(8, fPks.length + 1));
+        wins = Math.max(1, Math.min(8, Math.round(winPks.length / 2)));
+        let darkCols = 0;
+        const dTop = fBot - (fBot - facTop) * 0.28;
+        for (let x = Math.floor(W * 0.3); x < Math.ceil(W * 0.7); x++) {
+          let mm = 0, nn = 0;
+          for (let y = Math.max(0, Math.round(dTop)); y < H - 1; y++) { mm += gray[y * W + x]; nn++; }
+          if (nn && mm / nn < stats(gray).mean - 28) darkCols++;
+        }
+        doors = darkCols > W * 0.06 ? 2 : 1;
+      }
+      facade = avgAbs(bLeft + facW * 0.05, bRight - facW * 0.05, facTop + facH * 0.15, facBot - 2);
       if (hasEave) {
-        roofColor = avgAbs(W * 0.15, W * 0.85, bTop + 1, eave - 1);
+        roofColor = avgAbs(bLeft + facW * 0.05, bRight - facW * 0.05, bTop + 1, eave - 1);
         roofDepthPx = eave - bTop;
         roofVis = roofDepthPx >= 6;
+        const rowW = [];
+        for (let y = bTop + 1; y < eave; y++) {
+          const hist = new Map();
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4;
+            const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+            hist.set(k, (hist.get(k) || 0) + 1);
+          }
+          let modeK = 0, modeN = 0;
+          for (const [k, n] of hist) if (n > modeN) { modeN = n; modeK = k; }
+          const mr = (modeK >> 8) * 16 + 8, mg = ((modeK >> 4) & 15) * 16 + 8, mb = (modeK & 15) * 16 + 8;
+          let l = -1, r = -1;
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4;
+            const dr = d[i] - mr, dg = d[i + 1] - mg, db = d[i + 2] - mb;
+            if (dr * dr + dg * dg + db * db > 700) { if (l < 0) l = x; r = x; }
+          }
+          rowW.push(l >= 0 ? r - l + 1 : 0);
+        }
+        if (rowW.length >= 6) {
+          const topW = (rowW[0] + rowW[1] + rowW[2]) / 3;
+          const botW = (rowW[rowW.length - 3] + rowW[rowW.length - 2] + rowW[rowW.length - 1]) / 3;
+          const ratio = topW / Math.max(1, botW);
+          if (ratio < 0.35) roofShape = 'gabled';
+          else if (ratio < 0.9) roofShape = 'hip';
+          else roofShape = 'gabled';
+        } else roofShape = 'flat';
       } else {
         roofColor = FacadeLib.shade(facade, -50);
+        roofShape = 'flat';
       }
     }
-    return { facade, roofColor, floors, wins, doors, roofShape: 'flat', isDach, wM: 15, dM: 8, hM: floors * 3, roofVis, bWidthPx, roofDepthPx };
+    return { facade, roofColor, floors, wins, doors, openings, roofShape, isDach, wM: 15, dM: 8, hM: floors * 3, roofVis, bWidthPx, roofDepthPx };
   },
 
   currentParams() {
@@ -226,6 +323,7 @@ const Editor = {
       roofVis: !!(Editor.params && Editor.params.roofVis),
       bWidthPx: (Editor.params && Editor.params.bWidthPx) || 0,
       roofDepthPx: (Editor.params && Editor.params.roofDepthPx) || 0,
+      openings: (Editor.params && Editor.params.openings) || null,
       camAngle: Math.max(10, Math.min(80, parseFloat(document.getElementById('pAngle').value) || 30))
     };
   },
@@ -316,6 +414,8 @@ const Editor = {
         document.getElementById('pDoors').value = Editor.params.doors;
         document.getElementById('pFacade').value = Editor.params.facade;
         document.getElementById('pRoof').value = Editor.params.roofColor;
+        if (['flat', 'gabled', 'hip', 'pyramidal'].includes(Editor.params.roofShape)) document.getElementById('pRoofShape').value = Editor.params.roofShape;
+        info += '\n🪟 ' + (Editor.params.openings ? Editor.params.openings.length + ' Öffnungen einzeln erkannt (' + Editor.params.openings.filter(o => o.type === 'win').length + ' Fenster, ' + Editor.params.openings.filter(o => o.type === 'door').length + ' Türen), Dachform: ' + Editor.params.roofShape : 'keine einzelnen Öffnungen erkannt — Raster-Fallback');
         if (Editor.osm) {
           document.getElementById('pW').value = Math.round(Editor.osm.wM * 2) / 2;
           document.getElementById('pD').value = Math.round(Editor.osm.dM * 2) / 2;
@@ -366,6 +466,7 @@ const Editor = {
           document.getElementById('pDoors').value = Editor.params.doors;
           document.getElementById('pFacade').value = Editor.params.facade;
           document.getElementById('pRoof').value = Editor.params.roofColor;
+          if (['flat', 'gabled', 'hip', 'pyramidal'].includes(Editor.params.roofShape)) document.getElementById('pRoofShape').value = Editor.params.roofShape;
         }
         Editor.refreshPreview();
       });
