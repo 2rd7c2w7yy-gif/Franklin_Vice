@@ -50,7 +50,12 @@ const Game = {
       SFX.init();
       SFX.ensure();
       if (e.button === 2) this.orbiting = true;
-      else if (e.button === 0) this.mouse.down = true;
+      else if (e.button === 0) {
+        const mb = this.modeBtn;
+        if (mb && e.clientX >= mb.x && e.clientX <= mb.x + mb.w && e.clientY >= mb.y && e.clientY <= mb.y + mb.h) {
+          this.setMode(this.mode === '3d' ? '2d' : '3d');
+        } else this.mouse.down = true;
+      }
     });
     window.addEventListener('mouseup', (e) => {
       if (e.button === 2) this.orbiting = false;
@@ -157,8 +162,9 @@ const Game = {
 
   onKey(e, down) {
     let c = e.code;
-    if (c === 'Digit2' || c === 'Numpad2') c = 'Key2';
-    if (c === 'Digit3' || c === 'Numpad3') c = 'Key3';
+    const k = e.key;
+    if (c === 'Digit2' || c === 'Numpad2' || k === '2') c = 'Key2';
+    if (c === 'Digit3' || c === 'Numpad3' || k === '3') c = 'Key3';
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
     this.keys[c] = down;
     if (down && !e.repeat) {
@@ -1004,6 +1010,25 @@ const Game = {
     g.font = '15px Verdana, sans-serif';
     g.fillStyle = 'rgba(255,255,255,0.8)';
     g.fillText(String(hour).padStart(2, '0') + ':' + String(min).padStart(2, '0'), vw - 16, 262);
+
+    {
+      const mb = { x: vw - 116, y: 272, w: 100, h: 26 };
+      this.modeBtn = mb;
+      g.fillStyle = 'rgba(0,0,0,0.45)';
+      g.fillRect(mb.x, mb.y, mb.w, mb.h);
+      g.strokeStyle = 'rgba(255,255,255,0.35)';
+      g.lineWidth = 1;
+      g.strokeRect(mb.x, mb.y, mb.w, mb.h);
+      g.textAlign = 'center';
+      g.font = 'bold 14px Verdana, sans-serif';
+      g.fillStyle = this.mode === '3d' ? 'rgba(255,255,255,0.45)' : '#7dff6a';
+      g.fillText('2D', mb.x + 24, mb.y + 18);
+      g.fillStyle = this.mode === '3d' ? '#7dff6a' : 'rgba(255,255,255,0.45)';
+      g.fillText('3D', mb.x + 76, mb.y + 18);
+      g.font = '10px Verdana, sans-serif';
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.fillText('Taste 2/3 oder klicken', mb.x + mb.w / 2, mb.y + mb.h + 11);
+    }
 
     if (p.inCar) {
       g.textAlign = 'right';

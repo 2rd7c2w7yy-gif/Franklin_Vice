@@ -31,7 +31,7 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 | `E` | Auto klauen / aussteigen, Mission am gelben Marker starten |
 | `Leertaste` | Handbremse (Drift) |
 | `F` oder linker Klick | Schießen |
-| `2` / `3` | 2D-Top-Down / 3D-Modus umschalten |
+| `2` / `3` (auch ohne Zehnerblock: obere Ziffernreihe `Digit2`/`Digit3`) | 2D-Top-Down / 3D-Modus umschalten — alternativ klickbarer **2D/3D-Button** im HUD oben rechts (neben der Uhr) |
 | `P` | Pause |
 | `M` | Ton an/aus |
 | `H` | kleine Tastenübersicht im HUD ein-/ausblenden (unten links, immer sichtbar) |
