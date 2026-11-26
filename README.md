@@ -161,6 +161,31 @@ oder **KartaView** sowie **Wikimedia Commons** — wer eigene, passend lizenzier
 sie gern ins Repo legen (`textures/`); auf Wunsch baue ich eine Manifest-Anbindung dafür ein.
 Aktuell ist die Grafik komplett prozedural und damit lizenzfrei.
 
+## Gebäude-Editor (Edit-Modul)
+
+Auf dem **Titelbildschirm** gibt es den Button **„🛠 GEBÄUDE-EDITOR“** (oder `editor.html` direkt aufrufen).
+Ablauf:
+
+1. **Foto/Screenshot hochladen** (eigenes Foto mit EXIF-GPS oder Screenshot aus einer Karten-App als Dachaufsicht).
+   Das Foto selbst wird **nicht im Spiel angezeigt und nicht gespeichert** — nur abgeleitete Werte
+   (Etagen, Fenster, Türen, Fassaden-/Dachfarbe, Maße). Bitte keine Google/Apple-StreetView-Bilder verwenden (ToS).
+2. **Analyse**: Das Modul liest EXIF-GPS (eigener Parser), erkennt per Kantenerkennung (Sobel)
+   Etagen (waagerechte Kanten), Fenster pro Etage (senkrechte Kanten), Tür (dunkler Bereich unten)
+   und mittelt Fassaden-/Dachfarbe. Dazu Auto-Erkennung „Hausfoto (Seitenansicht)“ vs. „Dachaufsicht“.
+   Alle Werte sind per Regler nachträglich anpassbar; Vorschau zeigt die entstehende Grafik.
+3. **OSM-Abgleich**: Liegt EXIF-GPS vor, wird das nächstgelegene OSM-Gebäude in `geodata.js` gesucht —
+   per Klick übernimmt das Modul dessen **Ausrichtung** (Winkel der längsten Kante) und optional
+   **Grundriss + Maße**.
+4. **Platzieren**: „➜ In der 2D-Karte platzieren“ wechselt zum Spiel (`index.html?edit=1&mode=2d`):
+   Maus = Position, **Q/E = drehen** (5°, mit Shift 1°), **Enter = speichern**, **Esc = abbrechen**.
+   Ein Ghost zeigt live den Abstand zur Straße (grün ≥ 0,5 px, sonst rot).
+5. Gespeicherte Gebäude liegen im **localStorage** (`fve_edits`) und werden beim Spielstart automatisch
+   geladen (2D-Dachfarbe + 3D-Fassade mit eigener Textur via `js/facade.js`). Im Editor lassen sie sich
+   auflisten, löschen, neu platzieren und als **JSON exportieren/importieren** (z. B. `custom_buildings.json`
+   fürs Repo). Eigene Gebäude unterliegen denselben Regeln wie OSM-Gebäude (nie auf Wegen, Kollision etc.).
+
+Dateien: `editor.html`, `js/editor.js`, `js/facade.js`.
+
 ## Referenz-Fotos aus Franklin (ohne Anzeige im Spiel)
 
 Fotos aus Franklin (eigene, mit EXIF-GPS) werden **nicht im Spiel angezeigt**.

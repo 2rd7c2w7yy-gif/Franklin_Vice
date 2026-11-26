@@ -106,15 +106,29 @@ const Render3D = {
         if (i === 0) shape.moveTo(x, -y);
         else shape.lineTo(x, -y);
       });
-      const h3 = isCal ? 9.2 : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48));
+      const h3 = isCal ? 9.2 : (b.facade && b.facade.hM ? b.facade.hM : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48)));
       const hExtr = isCal ? 6.3 : h3;
       const geo = new THREE.ExtrudeGeometry(shape, { depth: hExtr, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
-      const tint = new THREE.Color(isCal ? 0xd8c7a3 : b.color);
+      const tint = new THREE.Color(isCal ? 0xd8c7a3 : (b.facade && b.facade.facade ? b.facade.facade : b.color));
       const commercial = ['commercial', 'retail', 'office', 'industrial', 'warehouse', 'garage', 'church', 'school', 'hospital'].includes(b.bt);
       const variant = commercial ? 1 : b.bt === 'apartments' ? 2 : 0;
-      const ftex = this.facadeTexs[variant].clone();
-      ftex.needsUpdate = true;
+      let ftex;
+      if (b.facade && typeof FacadeLib !== 'undefined') {
+        if (!this.customTexCache) this.customTexCache = new Map();
+        const key = JSON.stringify(b.facade);
+        if (!this.customTexCache.has(key)) {
+          const cv = FacadeLib.makeCanvas(b.facade, 128, 256, (b.cx * 13 + b.cy * 7) | 0);
+          const t = new THREE.CanvasTexture(cv);
+          t.wrapS = t.wrapT = THREE.RepeatWrapping;
+          t.repeat.set(1 / Math.max(1, Math.round((Math.max(...bxs) - Math.min(...bxs)) / 52)), 1);
+          this.customTexCache.set(key, t);
+        }
+        ftex = this.customTexCache.get(key);
+      } else {
+        ftex = this.facadeTexs[variant].clone();
+        ftex.needsUpdate = true;
+      }
       const sideMat = new THREE.MeshLambertMaterial(isCal ? { color: tint } : { map: ftex, color: tint });
       const capCol = World.roofColor(b);
       const capMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) });

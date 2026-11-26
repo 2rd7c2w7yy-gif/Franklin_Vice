@@ -52,8 +52,11 @@ const Game = {
       if (e.button === 2) this.orbiting = true;
       else if (e.button === 0) {
         const mb = this.modeBtn;
+        const eb = this.editorBtn;
         if (mb && e.clientX >= mb.x && e.clientX <= mb.x + mb.w && e.clientY >= mb.y && e.clientY <= mb.y + mb.h) {
           this.setMode(this.mode === '3d' ? '2d' : '3d');
+        } else if (this.state === 'title' && eb && e.clientX >= eb.x && e.clientX <= eb.x + eb.w && e.clientY >= eb.y && e.clientY <= eb.y + eb.h) {
+          try { location.href = 'editor.html'; } catch (err) {}
         } else this.mouse.down = true;
       }
     });
@@ -87,6 +90,22 @@ const Game = {
       try { Render3D.init(); } catch (e) { Render3D.available = false; }
     }
     if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('mode') === '2d') Render3D.available = false;
+    this.editPlace = null;
+    try {
+      if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('edit') === '1') {
+        const pend = JSON.parse(localStorage.getItem('fve_pending') || 'null');
+        if (pend && pend.facade && pend.facade.wM && pend.facade.dM) {
+          if (!pend.cx || !pend.cy) {
+            const c = World.toWorld(pend.lon || 8.529, pend.lat || 49.52);
+            pend.cx = c.x; pend.cy = c.y;
+          }
+          if (!pend.rot && pend.rot !== 0) pend.rot = 0;
+          this.editPlace = pend;
+          this.state = 'play';
+          this.toast('Platzieren: Maus = Position · Q/E = drehen (Shift = 1°) · Enter = speichern · Esc = abbrechen');
+        }
+      }
+    } catch (e) { this.editPlace = null; }
     this.setMode(Render3D.available ? '3d' : '2d', true);
     if (window.__TEST__) return;
     let last = performance.now();
@@ -170,6 +189,13 @@ const Game = {
     if (down && !e.repeat) {
       SFX.init();
       SFX.ensure();
+      if (this.editPlace) {
+        if (c === 'Enter') this.confirmEdit();
+        else if (c === 'Escape') this.cancelEdit();
+        else if (c === 'KeyQ') this.editPlace.rot -= (e.shiftKey ? 1 : 5) * Math.PI / 180;
+        else if (c === 'KeyE') this.editPlace.rot += (e.shiftKey ? 1 : 5) * Math.PI / 180;
+        return;
+      }
       const MODS = ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'CapsLock', 'Tab', 'Escape'];
       if (this.state === 'title' && !MODS.includes(c)) {
         this.state = 'play';
@@ -248,6 +274,7 @@ const Game = {
     this.time += dt;
     this.hintT += dt;
     this.dayT = (this.dayT + dt / CFG.DAY_LENGTH) % 1;
+    if (this.editPlace) { this.updateEditPlace(dt); return; }
     const p = this.player;
     p.fireCd -= dt;
 
@@ -809,9 +836,98 @@ const Game = {
       g.setTransform(1, 0, 0, 1, 0, 0);
     }
 
+    if (this.editPlace && this.mode === '2d') this.drawEditGhost(g);
+
     this.drawHUD(g);
     this.drawMinimap(g);
     this.drawOverlays(g);
+  },
+
+  updateEditPlace(dt) {
+    const ep = this.editPlace;
+    const z = this.cam.zoom || 1;
+    ep.cx = (this.mouse.x - this.vw / 2) / z + this.cam.x;
+    ep.cy = (this.mouse.y - this.vh / 2) / z + this.cam.y;
+    const rotSp = (this.keys.KeyE ? 1 : 0) - (this.keys.KeyQ ? 1 : 0);
+    if (rotSp) ep.rot += rotSp * ((this.keys.ShiftLeft || this.keys.ShiftRight) ? 0.4 : 2.2) * dt;
+    const ck = 1 - Math.pow(0.001, dt);
+    this.cam.x += (ep.cx - this.cam.x) * ck;
+    this.cam.y += (ep.cy - this.cam.y) * ck;
+  },
+
+  editGhostPts(ep) {
+    const s = World.s, hw = ep.facade.wM * s / 2, hd = ep.facade.dM * s / 2;
+    const ux = Math.cos(ep.rot), uy = Math.sin(ep.rot), nx = -uy, ny = ux;
+    return [
+      [ep.cx + ux * hd + nx * hw, ep.cy + uy * hd + ny * hw],
+      [ep.cx + ux * hd - nx * hw, ep.cy + uy * hd - ny * hw],
+      [ep.cx - ux * hd - nx * hw, ep.cy - uy * hd - ny * hw],
+      [ep.cx - ux * hd + nx * hw, ep.cy - uy * hd + ny * hw]
+    ];
+  },
+
+  confirmEdit() {
+    const ep = this.editPlace;
+    if (!ep) return;
+    const pts = this.editGhostPts(ep);
+    const ll = pts.map(q => World.toLonLat(q[0], q[1]));
+    ll.push(ll[0].slice());
+    const rec = { p: ll, n: ep.name || 'Eigenes Gebäude', lvl: 0, roof: ep.facade.roofShape === 'gabled' ? 'gabled' : 'flat', bt: 'yes', facade: ep.facade };
+    let edits = [];
+    try { edits = JSON.parse(localStorage.getItem('fve_edits') || '[]') || []; } catch (e) {}
+    if (!Array.isArray(edits)) edits = [];
+    edits.push(rec);
+    try {
+      localStorage.setItem('fve_edits', JSON.stringify(edits));
+      localStorage.removeItem('fve_pending');
+    } catch (e) {}
+    this.editPlace = null;
+    this.toast('Gebäude gespeichert — es erscheint jetzt in 2D und 3D!');
+    setTimeout(() => { try { location.href = 'index.html?mode=2d'; } catch (e) {} }, 600);
+  },
+
+  cancelEdit() {
+    try { localStorage.removeItem('fve_pending'); } catch (e) {}
+    this.editPlace = null;
+    try { location.href = 'index.html'; } catch (e) {}
+  },
+
+  drawEditGhost(g) {
+    const vw = this.vw, vh = this.vh;
+    const ep = this.editPlace;
+    const z = this.cam.zoom || 1;
+    const pts = this.editGhostPts(ep);
+    const cl = World.roadClearance(pts);
+    g.setTransform(z, 0, 0, z, vw / 2 - this.cam.x * z, vh / 2 - this.cam.y * z);
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.closePath();
+    g.fillStyle = cl >= 0.5 ? 'rgba(125,255,106,0.35)' : 'rgba(255,80,80,0.4)';
+    g.fill();
+    g.strokeStyle = cl >= 0.5 ? '#7dff6a' : '#ff5050';
+    g.lineWidth = 2.5 / z;
+    g.stroke();
+    const ux = Math.cos(ep.rot), uy = Math.sin(ep.rot);
+    g.beginPath();
+    g.moveTo(ep.cx, ep.cy);
+    g.lineTo(ep.cx + ux * 60, ep.cy + uy * 60);
+    g.strokeStyle = '#ffe63c';
+    g.lineWidth = 3 / z;
+    g.stroke();
+    g.fillStyle = '#ffe63c';
+    g.beginPath();
+    g.arc(ep.cx + ux * 60, ep.cy + uy * 60, 6 / z, 0, 7);
+    g.fill();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.textAlign = 'center';
+    g.font = 'bold 15px Verdana, sans-serif';
+    g.fillStyle = 'rgba(0,0,0,0.6)';
+    g.fillRect(vw / 2 - 330, vh - 92, 660, 76);
+    g.fillStyle = '#fff';
+    g.fillText('🛠 ' + (ep.name || 'Eigenes Gebäude') + ' — ' + (ep.facade.wM | 0) + '×' + (ep.facade.dM | 0) + ' m, ' + Math.round(ep.rot * 180 / Math.PI) + '°' + (ep.osmName ? ' · OSM: ' + ep.osmName : ''), vw / 2, vh - 68);
+    g.fillStyle = cl >= 0.5 ? '#7dff6a' : '#ff8080';
+    g.fillText('Maus = Position · Q/E = drehen (Shift = 1°) · Enter = speichern · Esc = abbrechen · Abstand zur Straße: ' + cl.toFixed(1) + ' px', vw / 2, vh - 44);
   },
 
   drawOverlays(g) {
@@ -1228,6 +1344,19 @@ const Game = {
       g.fillStyle = '#ffe63c';
       g.fillText('▶ Beliebige Taste drücken zum Spielen ◀', vw / 2, vh / 2 + 140);
     }
+    const eb = { x: vw / 2 - 170, y: vh / 2 + 168, w: 340, h: 38 };
+    this.editorBtn = eb;
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.fillRect(eb.x, eb.y, eb.w, eb.h);
+    g.strokeStyle = 'rgba(125,255,106,0.8)';
+    g.lineWidth = 1.5;
+    g.strokeRect(eb.x, eb.y, eb.w, eb.h);
+    g.fillStyle = '#7dff6a';
+    g.font = 'bold 16px Verdana, sans-serif';
+    g.fillText('🛠 GEBÄUDE-EDITOR', eb.x + eb.w / 2, eb.y + 24);
+    g.font = '12px Verdana, sans-serif';
+    g.fillStyle = 'rgba(255,255,255,0.8)';
+    g.fillText('Foto/Screenshot hochladen → eigenes Haus auf der Karte platzieren', eb.x + eb.w / 2, eb.y + eb.h + 15);
     g.font = '13px Verdana, sans-serif';
     g.fillStyle = 'rgba(255,255,255,0.75)';
     g.fillText('Fan-Parodie im GTA-Stil — echte Straßen & Orte aus Mannheim-Franklin. Keine echte Karte.', vw / 2, vh - 24);

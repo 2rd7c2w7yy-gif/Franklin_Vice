@@ -32,6 +32,10 @@ const World = {
     return { x: this.PAD + (lon - this.bbox[0]) * this.mPerDegLon * this.s, y: this.PAD + (this.bbox[3] - lat) * this.mPerDegLat * this.s };
   },
 
+  toLonLat(x, y) {
+    return [this.bbox[0] + (x - this.PAD) / (this.mPerDegLon * this.s), this.bbox[3] - (y - this.PAD) / (this.mPerDegLat * this.s)];
+  },
+
   shade(hex, amt) {
     const n = parseInt(hex.slice(1), 16);
     const r = clamp((n >> 16) + amt, 0, 255);
@@ -156,6 +160,15 @@ const World = {
       this.greens.push({ kind: gn.k, name: gn.n, pts });
     }
 
+    let customB = [];
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = JSON.parse(localStorage.getItem('fve_edits') || '[]');
+        if (Array.isArray(raw)) customB = raw.filter(b => b && Array.isArray(b.p) && b.p.length >= 3 && b.p.every(q => Array.isArray(q) && q.length >= 2));
+      }
+    } catch (e) { customB = []; }
+    if (customB.length) GEO.buildings = GEO.buildings.concat(customB);
+
     for (const bd of GEO.buildings) {
       let pts = bd.p.map(([lon, lat]) => {
         const w = this.toWorld(lon, lat);
@@ -175,7 +188,7 @@ const World = {
       const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
       const col = CFG.PALETTE.building[Math.abs((cx * 13 + cy * 7) | 0) % CFG.PALETTE.building.length];
-      this.buildings.push({ pts, cpts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes' });
+      this.buildings.push({ pts, cpts, color: col, cx, cy, name: bd.n || '', lvl: bd.lvl || 0, roof: bd.roof || '', bt: bd.bt || 'yes', facade: bd.facade || null });
     }
 
     let treeBudget = 420;
@@ -654,6 +667,7 @@ const World = {
   },
 
   roofColor(b) {
+    if (b.facade && b.facade.roofColor) return b.facade.roofColor;
     if ((b.name || '').includes('California')) return '#4f7a38';
     if (['gabled', 'prism', 'pyramidal', 'hip', 'round', 'onion'].includes(b.roof)) {
       return ['#7a4436', '#6a4a5a', '#4a5a6a', '#5a4632'][Math.abs((b.cx * 7 + b.cy * 3) | 0) % 4];
