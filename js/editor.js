@@ -170,42 +170,91 @@ const Editor = {
       roofColor = avg(0.1, 0.9, 0.1, 0.9);
     } else {
       const rowMax = Math.max(...rs);
-      const z0 = Math.floor(H * 0.04), z1 = Math.floor(H * 0.62);
-      const zone = new Float32Array(z1 - z0);
-      for (let y = z0; y < z1; y++) zone[y - z0] = rs[y];
-      const topPks = peaks(zone, Math.max(8, Math.round(H / 12)), 0.5);
-      let bTop = topPks.length ? z0 + topPks[0] : Math.round(H * 0.2);
-      if (!topPks.length) {
-        let topV = 0;
-        for (let y = z0; y < z1; y++) if (rs[y] > topV) { topV = rs[y]; bTop = y; }
+      const rowMode = new Array(H);
+      const rowW = new Float32Array(H);
+      for (let y = 0; y < H; y++) {
+        const hist = new Map();
+        for (let x = 0; x < W; x++) {
+          const i = (y * W + x) * 4;
+          const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+          hist.set(k, (hist.get(k) || 0) + 1);
+        }
+        let modeK = 0, modeN = 0;
+        for (const [k, n] of hist) if (n > modeN) { modeN = n; modeK = k; }
+        const mr = (modeK >> 8) * 16 + 8, mg = ((modeK >> 4) & 15) * 16 + 8, mb = (modeK & 15) * 16 + 8;
+        rowMode[y] = [mr, mg, mb];
+        let l = -1, r = -1;
+        for (let x = 0; x < W; x++) {
+          const i = (y * W + x) * 4;
+          const dr = d[i] - mr, dg = d[i + 1] - mg, db = d[i + 2] - mb;
+          if (dr * dr + dg * dg + db * db > 700) { if (l < 0) l = x; r = x; }
+        }
+        rowW[y] = l >= 0 ? r - l + 1 : 0;
       }
-      let eave = -1, eaveV = 0;
-      if (topPks.length >= 2 && z0 + topPks[1] <= bTop + (H - bTop) * 0.65) {
-        eave = z0 + topPks[1];
-        eaveV = rs[eave];
-      } else {
-        for (let y = bTop + 6; y < Math.min(H - 2, bTop + (H - bTop) * 0.65); y++) if (rs[y] > eaveV) { eaveV = rs[y]; eave = y; }
+      let maxW = W * 0.2;
+      for (let y = 0; y < H; y++) if (rowW[y] > maxW) maxW = rowW[y];
+      let bTop = 0;
+      for (let y = 0; y < Math.floor(H * 0.8); y++) {
+        if (rowW[y] > maxW * 0.35) {
+          let ok = true;
+          for (let k = 1; k <= 8 && y + k < H; k++) if (rowW[y + k] < maxW * 0.2) { ok = false; break; }
+          if (ok) { bTop = y; break; }
+        }
       }
-      const hasEave = eave > bTop && eaveV > rowMax * 0.22 && (eave - bTop) >= 5;
-      let fBot = H - 2, fbV = 0;
-      for (let y = Math.floor(H * 0.62); y < H - 1; y++) if (rs[y] > fbV) { fbV = rs[y]; fBot = y; }
+      let fBot = H - 1;
+      for (let y = H - 1; y > Math.floor(H * 0.2); y--) if (rowW[y] > maxW * 0.08) { fBot = y; break; }
+      const facadeMode = rowMode[Math.max(bTop + 4, Math.round(fBot - (fBot - bTop) * 0.25))];
+      let eave = -1, eaveJump = 0;
+      const eLo = bTop + 3, eHi = Math.min(fBot, bTop + (fBot - bTop) * 0.5);
+      for (let y = eLo; y < eHi; y++) {
+        const a = rowMode[y], b = rowMode[y + 1];
+        const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+        const jump = Math.sqrt(dr * dr + dg * dg + db * db);
+        const toFacade = Math.sqrt((b[0] - facadeMode[0]) ** 2 + (b[1] - facadeMode[1]) ** 2 + (b[2] - facadeMode[2]) ** 2) < 35;
+        const score = toFacade ? jump * 2 : jump;
+        if (score > eaveJump) { eaveJump = score; eave = y; }
+      }
+      let eaveV = 0;
+      if (!(eave > bTop && eaveJump > 38)) {
+        eave = -1;
+        for (let y = bTop + 4; y < Math.min(fBot, bTop + (fBot - bTop) * 0.55); y++) if (rs[y] > eaveV) { eaveV = rs[y]; eave = y; }
+      }
+      const hasEave = eave > bTop && (eaveJump > 38 || eaveV > rowMax * 0.22) && (eave - bTop) >= 4;
       const facTop = hasEave ? eave + 3 : bTop + 3;
       const facBot = Math.max(facTop + 8, fBot - 2);
-      let band = new Float32Array(W);
-      for (let x = 1; x < W - 1; x++) for (let y = facTop; y <= facBot; y++) band[x] += Math.abs(gxm[y * W + x]);
-      const bs = smooth(band, 2);
-      const winPks = peaks(bs, Math.max(6, Math.round(W / 24)), 0.3);
-      const strong = [];
-      for (const p of winPks) if (bs[p] > Math.max(...bs) * 0.35) strong.push(p);
-      const bLeft = strong.length >= 2 ? Math.min(...strong) : Math.floor(W * 0.1);
-      const bRight = strong.length >= 2 ? Math.max(...strong) : Math.ceil(W * 0.9);
-      bWidthPx = Math.max(10, bRight - bLeft);
-      const facW = bWidthPx, facH = facBot - facTop;
-      let fm = 0, fn = 0;
-      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) { fm += gray[y * W + x]; fn++; }
+      const facH = facBot - facTop;
+      const colH = new Float32Array(W);
+      for (let x = 0; x < W; x++) {
+        let cnt = 0;
+        for (let y = facTop; y <= facBot; y++) {
+          const i = (y * W + x) * 4;
+          const dr = d[i] - facadeMode[0], dg = d[i + 1] - facadeMode[1], db = d[i + 2] - facadeMode[2];
+          if (dr * dr + dg * dg + db * db <= 900) cnt++;
+        }
+        colH[x] = cnt;
+      }
+      let maxCH = 0;
+      for (let x = 0; x < W; x++) if (colH[x] > maxCH) maxCH = colH[x];
+      let bLeft = 0, bRight = W - 1;
+      for (let x = 0; x < W; x++) if (colH[x] > maxCH * 0.3) { bLeft = x; break; }
+      for (let x = W - 1; x >= 0; x--) if (colH[x] > maxCH * 0.3) { bRight = x; break; }
+      const facW = Math.max(10, bRight - bLeft);
+      bWidthPx = facW;
+      let fm = 0, fn = 0, fr = 0, fg = 0, fb = 0;
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
+        const i = (y * W + x) * 4;
+        const rm = rowMode[y];
+        const dr = d[i] - rm[0], dg = d[i + 1] - rm[1], db = d[i + 2] - rm[2];
+        if (dr * dr + dg * dg + db * db <= 700) { fm += gray[y * W + x]; fr += d[i]; fg += d[i + 1]; fb += d[i + 2]; fn++; }
+      }
       fm = fn ? fm / fn : 128;
+      const hex2 = (v) => Math.round(v / Math.max(1, fn)).toString(16).padStart(2, '0');
+      facade = fn ? '#' + hex2(fr) + hex2(fg) + hex2(fb) : '#d4c9b8';
       const dark = new Uint8Array(W * H);
-      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) { const gv = gray[y * W + x]; if (Math.abs(gv - fm) > 28 && gv < 246) dark[y * W + x] = 1; }
+      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
+        const gv = gray[y * W + x];
+        if (Math.abs(gv - fm) > 30 && gv < 246) dark[y * W + x] = 1;
+      }
       const seen = new Uint8Array(W * H);
       const comps = [];
       for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
@@ -242,7 +291,7 @@ const Editor = {
         }
       }
       openings = comps.slice(0, 80).map(c => {
-        const isDoor = c.maxY > facBot - facH * 0.3 && c.h >= c.w * 1.4 && c.h >= facH * 0.15;
+        const isDoor = c.maxY >= facBot - 4 && c.maxY > facBot - facH * 0.25 && c.h >= facH * 0.1;
         return { x: +((c.minX - bLeft) / facW).toFixed(3), y: +((c.minY - facTop) / facH).toFixed(3), w: +(c.w / facW).toFixed(3), h: +(c.h / facH).toFixed(3), type: isDoor ? 'door' : 'win' };
       }).sort((a, b) => a.y - b.y || a.x - b.x);
       if (openings.length) {
@@ -257,49 +306,32 @@ const Editor = {
         const facRows = [];
         for (let y = facTop; y <= facBot; y++) facRows.push(rs[y]);
         const fPks = peaks(new Float32Array(facRows), Math.max(9, Math.round(H / 9)), 0.4);
-        floors = Math.max(2, Math.min(8, fPks.length + 1));
+        floors = Math.max(1, Math.min(8, fPks.length + 1));
+        let band = new Float32Array(W);
+        for (let x = 1; x < W - 1; x++) for (let y = facTop; y <= facBot; y++) band[x] += Math.abs(gxm[y * W + x]);
+        const winPks = peaks(smooth(band, 2), Math.max(6, Math.round(W / 24)), 0.3);
         wins = Math.max(1, Math.min(8, Math.round(winPks.length / 2)));
-        let darkCols = 0;
-        const dTop = fBot - (fBot - facTop) * 0.28;
-        for (let x = Math.floor(W * 0.3); x < Math.ceil(W * 0.7); x++) {
-          let mm = 0, nn = 0;
-          for (let y = Math.max(0, Math.round(dTop)); y < H - 1; y++) { mm += gray[y * W + x]; nn++; }
-          if (nn && mm / nn < stats(gray).mean - 28) darkCols++;
-        }
-        doors = darkCols > W * 0.06 ? 2 : 1;
+        doors = 1;
       }
-      facade = avgAbs(bLeft + facW * 0.05, bRight - facW * 0.05, facTop + facH * 0.15, facBot - 2);
       if (hasEave) {
-        roofColor = avgAbs(bLeft + facW * 0.05, bRight - facW * 0.05, bTop + 1, eave - 1);
         roofDepthPx = eave - bTop;
         roofVis = roofDepthPx >= 6;
-        const rowW = [];
+        let rr = 0, rg = 0, rb = 0, rn = 0;
         for (let y = bTop + 1; y < eave; y++) {
-          const hist = new Map();
-          for (let x = 0; x < W; x++) {
-            const i = (y * W + x) * 4;
-            const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
-            hist.set(k, (hist.get(k) || 0) + 1);
-          }
-          let modeK = 0, modeN = 0;
-          for (const [k, n] of hist) if (n > modeN) { modeN = n; modeK = k; }
-          const mr = (modeK >> 8) * 16 + 8, mg = ((modeK >> 4) & 15) * 16 + 8, mb = (modeK & 15) * 16 + 8;
-          let l = -1, r = -1;
-          for (let x = 0; x < W; x++) {
-            const i = (y * W + x) * 4;
-            const dr = d[i] - mr, dg = d[i + 1] - mg, db = d[i + 2] - mb;
-            if (dr * dr + dg * dg + db * db > 700) { if (l < 0) l = x; r = x; }
-          }
-          rowW.push(l >= 0 ? r - l + 1 : 0);
+          rr += rowMode[y][0]; rg += rowMode[y][1]; rb += rowMode[y][2]; rn++;
         }
-        if (rowW.length >= 6) {
-          const topW = (rowW[0] + rowW[1] + rowW[2]) / 3;
-          const botW = (rowW[rowW.length - 3] + rowW[rowW.length - 2] + rowW[rowW.length - 1]) / 3;
+        const hexR = (v) => Math.round(v / Math.max(1, rn)).toString(16).padStart(2, '0');
+        roofColor = rn ? '#' + hexR(rr) + hexR(rg) + hexR(rb) : FacadeLib.shade(facade, -50);
+        const depthRatio = roofDepthPx / Math.max(1, bWidthPx);
+        if (roofDepthPx < 9 || depthRatio < 0.12) roofShape = 'flat';
+        else {
+          const topW = (rowW[bTop + 1] + rowW[bTop + 2] + rowW[Math.min(bTop + 3, eave - 1)]) / 3;
+          const botW = (rowW[Math.max(bTop + 1, eave - 3)] + rowW[Math.max(bTop + 1, eave - 2)] + rowW[eave - 1]) / 3;
           const ratio = topW / Math.max(1, botW);
           if (ratio < 0.35) roofShape = 'gabled';
           else if (ratio < 0.9) roofShape = 'hip';
-          else roofShape = 'gabled';
-        } else roofShape = 'flat';
+          else roofShape = depthRatio < 0.4 ? 'flat' : 'gabled';
+        }
       } else {
         roofColor = FacadeLib.shade(facade, -50);
         roofShape = 'flat';

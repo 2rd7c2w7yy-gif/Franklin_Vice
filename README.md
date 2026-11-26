@@ -197,6 +197,11 @@ sondern als rote Fehlermeldung auf dem Canvas (Init-Fehler) bzw. Fehler-Banner i
 Der Platzier-Modus ist per try/catch abgesichert (bei Fehler zurück ins normale Spiel) und
  akzeptiert nur valide Pending-Daten. In der 2D-Karte zeigt ein **Hover über ein eigenes Gebäude**
 eine Vorschau-Karte mit der erkannten Ansicht (Dachform, Fenster, Türen an ihren Positionen).
+Die Analyse arbeitet **zeilenweise mit Hintergrund-Mode** (pro Bildzeile wird die häufigste Farbe als Hintergrund/Haus
+ermittelt) — dadurch funktionieren auch **eng zugeschnittene Fotos ohne Himmel/Straße** (Gebäude füllt das Bild).
+Gebäudetop/Unterkante kommen aus dem Breitenprofil, die Traufe aus dem stärksten Farbwechsel zur Fassadenfarbe,
+Gebäudekanten aus dem Fassaden-Spaltenprofil. Dachfarbe = Zeilen-Mode des Dachbands, Fassadenfarbe = Pixel nahe der
+Fassadenfarbe. Tür = Komponente, die die Fassaden-Unterkante erreicht.
 Die Analyse erkennt Fenster/Türen als helle **und** dunkle Flächen (verglichen mit der
 Fassaden-Helligkeit), mergt nur Komponenten derselben Reihe und fällt bei Fehlern auf
 sichere Standardwerte zurück.
