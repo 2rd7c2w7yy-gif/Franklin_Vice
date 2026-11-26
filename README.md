@@ -57,13 +57,16 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   roten Markierungen) wurden per Screenshot→Welt-Transform (Maßstab 2, Offset exakt per Korrelation bestimmt)
   übernommen: 6 Häuser stehen exakt an den markierten Stellen (ggf. wenige px nach Osten versetzt, damit sie
   nicht auf der Straße stehen; dort befindliche OSM-Gebäude wurden ersetzt). Weitere 9 Häuser ergänzen die
-  Reihe an den übrigen Zufahrten — insgesamt 14 California-Häuser (einzeln, nie aufgeteilt/überlappend).
+  Reihe an den übrigen Zufahrten — insgesamt 7 California-Häuser (einzeln, nie aufgeteilt/überlappend;
+  Platzierung nur mit voller Größe: ≥1,2 px Abstand zu allen Straßen außer der eigenen Zufahrt, sonst wird
+  das Haus vom Spiel auf bis zu 25 % verkleinert („zu kleines Haus“) — solche Plätze werden übersprungen).
   Maße: **15 m breit × 8 m tief, 10 m hoch**, **begrüntes Flachdach** (`roof=flat`, Dach grün),
   plus **Dachterrasse Nord und Süd, je 2 m** (helle Streifen an den Schmalseiten). Besonders
   detailliert und **alle mit identischem Design**: in 2D grünes Dach + Terrassenstreifen; in 3D
   **beige Putzfassade mit Fenstern und Tür** (dunkle Fenster an beiden Längsseiten und Giebeln,
-  braune Haustür), **nur die Dachfläche ist grün** (keine Attika mehr), zwei Terrassenplatten
-  mit Geländer an Nord/Süd. Name: „Sahle California · James-Monroe-Ring“.
+  braune Haustür), **nur die Dachfläche ist grün** (keine Attika, keine hohen Geländer-Stangen mehr —
+  laut Referenzfoto sind die Dachterrassen einfach gepflastert), zwei **hell gepflasterte Dachterrassen**
+  an Nord/Süd (je 2 m, bündig auf dem Dach). Name: „Sahle California · James-Monroe-Ring“.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
 - **Kreisverkehr (Wasserwerkstr. / James-Monroe-Ring / Franklin-D.-Roosevelt-Str.)**: als Ring aus OSM

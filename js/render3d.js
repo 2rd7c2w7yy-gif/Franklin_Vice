@@ -163,16 +163,12 @@ const Render3D = {
         const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.14), doorMat);
         door.position.set(0, 1.05, bs / 2 + 0.07);
         tg.add(door);
-        const slabMat = new THREE.MeshLambertMaterial({ color: 0x9a8a70 });
-        const railMat = new THREE.MeshLambertMaterial({ color: 0x777d85 });
+        const slabMat = new THREE.MeshLambertMaterial({ color: 0xb5ad9c });
         const t = 2 * 0.92;
         for (const sgn of [1, -1]) {
-          const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.35, bs), slabMat);
-          slab.position.set(sgn * (bl / 2 - t / 2), h3 + 0.17, 0);
+          const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.16, bs - 0.3), slabMat);
+          slab.position.set(sgn * (bl / 2 - t / 2), h3 + 0.08, 0);
           tg.add(slab);
-          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, bs), railMat);
-          rail.position.set(sgn * (bl / 2 - 0.15), h3 + 0.55, 0);
-          tg.add(rail);
         }
         this.scene.add(tg);
       }
