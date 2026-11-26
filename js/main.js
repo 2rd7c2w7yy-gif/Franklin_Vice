@@ -156,7 +156,9 @@ const Game = {
   },
 
   onKey(e, down) {
-    const c = e.code;
+    let c = e.code;
+    if (c === 'Digit2' || c === 'Numpad2') c = 'Key2';
+    if (c === 'Digit3' || c === 'Numpad3') c = 'Key3';
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
     this.keys[c] = down;
     if (down && !e.repeat) {
