@@ -62,11 +62,12 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   das Haus vom Spiel auf bis zu 25 % verkleinert („zu kleines Haus“) — solche Plätze werden übersprungen).
   Maße: **15 m breit × 8 m tief, 10 m hoch**, **begrüntes Flachdach** (`roof=flat`, Dach grün),
   plus **Dachterrasse Nord und Süd, je 2 m** (helle Streifen an den Schmalseiten). Besonders
-  detailliert und **alle mit identischem Design**: in 2D grünes Dach + Terrassenstreifen; in 3D
-  **beige Putzfassade mit Fenstern und Tür** (dunkle Fenster an beiden Längsseiten und Giebeln,
-  braune Haustür), **nur die Dachfläche ist grün** (keine Attika, keine hohen Geländer-Stangen mehr —
-  laut Referenzfoto sind die Dachterrassen einfach gepflastert), zwei **hell gepflasterte Dachterrassen**
-  an Nord/Süd (je 2 m, bündig auf dem Dach). Name: „Sahle California · James-Monroe-Ring“.
+  detailliert und **alle mit identischem Design**, als **Staffelgeschoss**: 3 Etagen, die **oberste Etage
+  ist je 2 m kürzer** (Nord/Süd zurückgesetzt) — die **Dachterrassen sind Aussparungen im Dachgeschoss**
+  (hell gepflastert, je 2 m an Nord/Süd, ohne Geländer/Attika). In 3D: beige Putzfassade mit je einer
+  Fensterreihe pro Etage (3 Fenster pro Längsseite) und brauner Haustür, nur die Dachfläche grün; in 2D:
+  grünes Dach mit dunklerer, zurückgesetzter Dachfläche der obersten Etage + helle Terrassenstreifen an den Enden.
+  Name: „Sahle California · James-Monroe-Ring“.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
 - **Kreisverkehr (Wasserwerkstr. / James-Monroe-Ring / Franklin-D.-Roosevelt-Str.)**: als Ring aus OSM

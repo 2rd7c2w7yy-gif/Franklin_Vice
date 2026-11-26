@@ -679,6 +679,15 @@ const World = {
           g.fillRect(-t / 2, -bs / 2, t, bs);
           g.restore();
         }
+        g.save();
+        g.translate(b.cx, b.cy);
+        g.rotate(Math.atan2(dy, dx));
+        g.fillStyle = 'rgba(25,60,20,0.38)';
+        g.fillRect(-(bl / 2 - t), -bs / 2 + 0.4, bl - 2 * t, bs - 0.8);
+        g.strokeStyle = 'rgba(0,0,0,0.45)';
+        g.lineWidth = 1;
+        g.strokeRect(-(bl / 2 - t), -bs / 2 + 0.4, bl - 2 * t, bs - 0.8);
+        g.restore();
       }
       g.fillStyle = 'rgba(0,0,0,0.16)';
       g.beginPath();

@@ -107,7 +107,8 @@ const Render3D = {
         else shape.lineTo(x, -y);
       });
       const h3 = isCal ? 9.2 : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48));
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: h3, bevelEnabled: false, curveSegments: 2 });
+      const hExtr = isCal ? 6.3 : h3;
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: hExtr, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
       const tint = new THREE.Color(isCal ? 0xd8c7a3 : b.color);
       const commercial = ['commercial', 'retail', 'office', 'industrial', 'warehouse', 'garage', 'church', 'school', 'hospital'].includes(b.bt);
@@ -143,31 +144,61 @@ const Render3D = {
         const q = b.pts[(bi + 1) % b.pts.length];
         let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
         const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+        const ux = dx, uy = dy, nx = -uy, ny = ux;
+        const t = 2 * 0.92;
+        const hLow = 6.3, hTop = h3 - hLow;
+        const blU = Math.max(2, bl - 2 * t);
+        const shapeU = new THREE.Shape();
+        b.pts.slice(0, 4).forEach((p, i) => {
+          const rx = p[0] - b.cx, ry = p[1] - b.cy;
+          const relU = rx * ux + ry * uy, relN = rx * nx + ry * ny;
+          const cu = Math.max(-(bl / 2 - t), Math.min(bl / 2 - t, relU));
+          const px = b.cx + ux * cu + nx * relN, py = b.cy + uy * cu + ny * relN;
+          if (i === 0) shapeU.moveTo(px, -py); else shapeU.lineTo(px, -py);
+        });
+        const geoU = new THREE.ExtrudeGeometry(shapeU, { depth: hTop, bevelEnabled: false, curveSegments: 2 });
+        geoU.rotateX(-Math.PI / 2);
+        const upper = new THREE.Mesh(geoU, [capMat, sideMat]);
+        upper.position.y = hLow;
+        this.scene.add(upper);
         const tg = new THREE.Group();
         tg.position.set(b.cx, 0, b.cy);
         tg.rotation.y = Math.atan2(-dy, dx);
         const winMat = new THREE.MeshLambertMaterial({ color: 0x27313d });
         const doorMat = new THREE.MeshLambertMaterial({ color: 0x5a4632 });
         const wgeo = new THREE.BoxGeometry(1.15, 1.35, 0.14);
-        const wxs = [-bl / 2 + 2.0, -bl / 6, bl / 6, bl / 2 - 2.0];
+        const wxs = [-bl / 3, 0, bl / 3];
+        const wxsU = [-blU / 3, 0, blU / 3];
         for (const sgn of [1, -1]) {
-          for (const wx of wxs) {
+          for (const wy of [1.55, 4.6]) {
+            for (const wx of wxs) {
+              if (wy < 2 && sgn > 0 && wx === 0) continue;
+              const win = new THREE.Mesh(wgeo, winMat);
+              win.position.set(wx, wy, sgn * (bs / 2 + 0.07));
+              tg.add(win);
+            }
+          }
+          for (const wx of wxsU) {
             const win = new THREE.Mesh(wgeo, winMat);
-            win.position.set(wx, 1.9, sgn * (bs / 2 + 0.07));
+            win.position.set(wx, hLow + 1.55, sgn * (bs / 2 + 0.07));
             tg.add(win);
           }
-          const wside = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 1.15), winMat);
-          wside.position.set(sgn * (bl / 2 + 0.07), 1.9, 0);
-          tg.add(wside);
+          for (const wy of [1.55, 4.6]) {
+            const wside = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 1.15), winMat);
+            wside.position.set(sgn * (bl / 2 + 0.07), wy, 0);
+            tg.add(wside);
+          }
+          const wsideU = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 1.15), winMat);
+          wsideU.position.set(sgn * (blU / 2 + t + 0.07), hLow + 1.55, 0);
+          tg.add(wsideU);
         }
         const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.14), doorMat);
         door.position.set(0, 1.05, bs / 2 + 0.07);
         tg.add(door);
         const slabMat = new THREE.MeshLambertMaterial({ color: 0xb5ad9c });
-        const t = 2 * 0.92;
         for (const sgn of [1, -1]) {
           const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.16, bs - 0.3), slabMat);
-          slab.position.set(sgn * (bl / 2 - t / 2), h3 + 0.08, 0);
+          slab.position.set(sgn * (bl / 2 - t / 2), hLow + 0.08, 0);
           tg.add(slab);
         }
         this.scene.add(tg);
