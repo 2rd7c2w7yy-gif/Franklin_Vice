@@ -275,6 +275,15 @@ const Game = {
         if (car.health <= 0) this.explodeCar(car);
       }
     } else {
+      if (this.mode === '2d') {
+        const iv = this.inputVector();
+        if (iv.x !== 0 || iv.y !== 0) {
+          const target = Math.atan2(iv.y, iv.x);
+          p.angle += angleDiff(target, p.angle) * Math.min(1, 14 * dt);
+          p.vx += iv.x * CFG.PLAYER_ACCEL * dt;
+          p.vy += iv.y * CFG.PLAYER_ACCEL * dt;
+        }
+      } else {
       const fwd = (this.keys.KeyW || this.keys.ArrowUp) ? 1 : (this.keys.KeyS || this.keys.ArrowDown) ? -1 : 0;
       let turnIn = (this.keys.KeyA || this.keys.ArrowLeft) ? -1 : (this.keys.KeyD || this.keys.ArrowRight) ? 1 : 0;
       const step = Math.PI / 18;
@@ -299,6 +308,7 @@ const Game = {
         const acc = CFG.PLAYER_ACCEL * (fwd < 0 ? 0.6 : 1);
         p.vx += Math.cos(p.angle) * acc * fwd * dt;
         p.vy += Math.sin(p.angle) * acc * fwd * dt;
+      }
       }
       const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       const max = CFG.PLAYER_SPEED;
@@ -1044,20 +1054,31 @@ const Game = {
       g.textAlign = 'left';
       g.font = '13px Verdana, sans-serif';
       g.fillStyle = 'rgba(255,255,255,' + clamp(25 - this.hintT, 0, 1) * 0.75 + ')';
-      g.fillText('↑/↓(W/S) = vorwärts/rückwärts · ←/→(A/D) = Figur drehen in 10°-Schritten · im Auto lenken ←/→ · Maus = zielen · F/Klick = schießen · E = Auto/Mission · Leertaste = Handbremse · 2/3 = 2D/3D · P = Pause · M = Ton', 16, vh - 16);
+      g.fillText(this.mode === '2d'
+        ? '2D: ↑/↓/←/→ (WASD) = Himmelsrichtung (N/S/W/O) · Maus = zielen · F/Klick = schießen · E = Auto/Mission · Leertaste = Handbremse · 3 = 3D · P = Pause · M = Ton'
+        : '3D: ↑/↓(W/S) = vorwärts/rückwärts · ←/→(A/D) = Figur drehen in 10°-Schritten · im Auto lenken ←/→ · Maus = zielen · F/Klick = schießen · E = Auto/Mission · Leertaste = Handbremse · 2 = 2D · P = Pause · M = Ton', 16, vh - 16);
     }
 
     if (this.showKeys && this.state === 'play') {
-      const rows = [
-        ['W/S · Pfeile', 'vorwärts / rückwärts'],
-        ['A/D · Pfeile', 'drehen (10°) · Auto: lenken'],
+      const rows = (this.mode === '2d' ? [
+        ['W/S · Pfeile ↑/↓', 'Nord / Süd'],
+        ['A/D · Pfeile ←/→', 'West / Ost'],
         ['Maus', 'zielen · ziehen = Kamera (3D)'],
         ['F / Klick', 'schießen'],
         ['E', 'Auto / aussteigen / Mission'],
         ['Leertaste', 'Handbremse (Auto)'],
         ['2 / 3', '2D / 3D-Modus'],
         ['P · M · H', 'Pause · Ton · diese Box']
-      ];
+      ] : [
+        ['W/S · Pfeile ↑/↓', 'vorwärts / rückwärts'],
+        ['A/D · Pfeile ←/→', 'drehen (10°) · Auto: lenken'],
+        ['Maus', 'zielen · ziehen = Kamera (3D)'],
+        ['F / Klick', 'schießen'],
+        ['E', 'Auto / aussteigen / Mission'],
+        ['Leertaste', 'Handbremse (Auto)'],
+        ['2 / 3', '2D / 3D-Modus'],
+        ['P · M · H', 'Pause · Ton · diese Box']
+      ]);
       g.textAlign = 'left';
       g.font = '12px Verdana, sans-serif';
       const bw = 252, bh = rows.length * 15 + 24;
@@ -1177,7 +1198,7 @@ const Game = {
     g.fillText('Mannheim-Käfertal · Benjamin Franklin Village', vw / 2, vh / 2 - 66);
     g.font = '17px Verdana, sans-serif';
     const lines = [
-      '↑/↓ = vorwärts/rückwärts · ←/→ = Figur drehen (10°-Schritte) · E = Auto/Mission · Leertaste = Handbremse',
+      '2D: Pfeile/WASD = Himmelsrichtung (N/S/W/O) · 3D: ↑/↓ = vorwärts/rückwärts, ←/→ = Figur drehen (10°-Schritte) · E = Auto/Mission · Leertaste = Handbremse',
       'Maus = zielen · F oder Klick = schießen · rechte Maustaste ziehen = Kamera drehen (3D) · P = Pause · M = Ton',
       'Gelbe Marker = Missionen (Taxi, Pakete, Wald-Sprint)',
       '2 = 2D-Top-Down · 3 = 3D (Third-Person) — Vorsicht: ★ bei Verbrechen → WASTED / BUSTED!'

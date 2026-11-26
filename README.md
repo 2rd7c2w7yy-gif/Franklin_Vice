@@ -22,9 +22,10 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 
 | Taste | Aktion |
 | --- | --- |
-| `↑` / `↓` (W/S) | Figur vorwärts / rückwärts bewegen (in Blickrichtung) |
-| `←` / `→` (A/D) | Figur **drehen** — nur in **10°-Schritten** (Tank-Steuerung); im Auto: lenken |
-| automatisch | Folgt die Figur beim Vorwärtslaufen einem kurvigen Weg, dreht sie **ohne weiteres Lenken** in 10°-Schritten der Kurve entlang |
+| `↑` / `↓` / `←` / `→` (WASD) | **2D-Modus:** Figur bewegt sich in die jeweilige **Himmelsrichtung** (↑=Norden, ↓=Süden, ←=Westen, →=Osten) — direkt, nicht relativ zur Blickrichtung |
+| `↑` / `↓` (W/S) | **3D-Modus:** Figur vorwärts / rückwärts bewegen (in Blickrichtung) |
+| `←` / `→` (A/D) | **3D-Modus:** Figur **drehen** — nur in **10°-Schritten** (Tank-Steuerung); im Auto (beide Modi): lenken |
+| automatisch (3D) | Folgt die Figur beim Vorwärtslaufen einem kurvigen Weg, dreht sie **ohne weiteres Lenken** in 10°-Schritten der Kurve entlang |
 | beliebige Taste | Titel-Screen starten |
 | Maus | Zielen (Schussrichtung folgt dem Fadenkreuz) |
 | rechte Maustaste ziehen | Kamera um den Spieler drehen (nur 3D) |
