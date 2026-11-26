@@ -109,12 +109,12 @@ const Render3D = {
       const h3 = isCal ? 9.2 : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48));
       const geo = new THREE.ExtrudeGeometry(shape, { depth: h3, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
-      const tint = new THREE.Color(b.color);
+      const tint = new THREE.Color(isCal ? 0xd8c7a3 : b.color);
       const commercial = ['commercial', 'retail', 'office', 'industrial', 'warehouse', 'garage', 'church', 'school', 'hospital'].includes(b.bt);
       const variant = commercial ? 1 : b.bt === 'apartments' ? 2 : 0;
       const ftex = this.facadeTexs[variant].clone();
       ftex.needsUpdate = true;
-      const sideMat = new THREE.MeshLambertMaterial({ map: ftex, color: tint });
+      const sideMat = new THREE.MeshLambertMaterial(isCal ? { color: tint } : { map: ftex, color: tint });
       const capCol = World.roofColor(b);
       const capMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(capCol) });
       const mesh = new THREE.Mesh(geo, [sideMat, capMat]);
@@ -144,26 +144,36 @@ const Render3D = {
         let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
         const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
         const tg = new THREE.Group();
-        tg.position.set(b.cx, h3, b.cy);
+        tg.position.set(b.cx, 0, b.cy);
         tg.rotation.y = Math.atan2(-dy, dx);
+        const winMat = new THREE.MeshLambertMaterial({ color: 0x27313d });
+        const doorMat = new THREE.MeshLambertMaterial({ color: 0x5a4632 });
+        const wgeo = new THREE.BoxGeometry(1.15, 1.35, 0.14);
+        const wxs = [-bl / 2 + 2.0, -bl / 6, bl / 6, bl / 2 - 2.0];
+        for (const sgn of [1, -1]) {
+          for (const wx of wxs) {
+            const win = new THREE.Mesh(wgeo, winMat);
+            win.position.set(wx, 1.9, sgn * (bs / 2 + 0.07));
+            tg.add(win);
+          }
+          const wside = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.35, 1.15), winMat);
+          wside.position.set(sgn * (bl / 2 + 0.07), 1.9, 0);
+          tg.add(wside);
+        }
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.14), doorMat);
+        door.position.set(0, 1.05, bs / 2 + 0.07);
+        tg.add(door);
         const slabMat = new THREE.MeshLambertMaterial({ color: 0x9a8a70 });
         const railMat = new THREE.MeshLambertMaterial({ color: 0x777d85 });
-        const parMat = new THREE.MeshLambertMaterial({ color: 0x8a8f96 });
         const t = 2 * 0.92;
         for (const sgn of [1, -1]) {
           const slab = new THREE.Mesh(new THREE.BoxGeometry(t, 0.35, bs), slabMat);
-          slab.position.set(sgn * (bl / 2 - t / 2), 0.17, 0);
+          slab.position.set(sgn * (bl / 2 - t / 2), h3 + 0.17, 0);
           tg.add(slab);
           const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.1, bs), railMat);
-          rail.position.set(sgn * (bl / 2 - 0.15), 0.55, 0);
+          rail.position.set(sgn * (bl / 2 - 0.15), h3 + 0.55, 0);
           tg.add(rail);
         }
-        const pA = new THREE.Mesh(new THREE.BoxGeometry(bl, 0.7, 0.3), parMat);
-        pA.position.set(0, 0.35, bs / 2 - 0.15); tg.add(pA);
-        const pB = pA.clone(); pB.position.z = -(bs / 2 - 0.15); tg.add(pB);
-        const pC = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, bs), parMat);
-        pC.position.set(bl / 2 - 0.15, 0.35, 0); tg.add(pC);
-        const pD = pC.clone(); pD.position.x = -(bl / 2 - 0.15); tg.add(pD);
         this.scene.add(tg);
       }
     }

@@ -22,7 +22,7 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 
 | Taste | Aktion |
 | --- | --- |
-| `↑` / `↓` / `←` / `→` (WASD) | **2D-Modus:** Figur bewegt sich in die jeweilige **Himmelsrichtung** (↑=Norden, ↓=Süden, ←=Westen, →=Osten) — direkt, nicht relativ zur Blickrichtung |
+| `↑` / `↓` / `←` / `→` (WASD) | **2D-Modus:** Figur bewegt sich in die jeweilige **Himmelsrichtung** (↑=Norden, ↓=Süden, ←=Westen, →=Osten); steht sie auf einem Weg, **folgt sie dem Wegverlauf automatisch** (auch um Kurven), statt stur geradeaus zu laufen |
 | `↑` / `↓` (W/S) | **3D-Modus:** Figur vorwärts / rückwärts bewegen (in Blickrichtung) |
 | `←` / `→` (A/D) | **3D-Modus:** Figur **drehen** — nur in **10°-Schritten** (Tank-Steuerung); im Auto (beide Modi): lenken |
 | automatisch (3D) | Folgt die Figur beim Vorwärtslaufen einem kurvigen Weg, dreht sie **ohne weiteres Lenken** in 10°-Schritten der Kurve entlang |
@@ -57,14 +57,20 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
   roten Markierungen) wurden per Screenshot→Welt-Transform (Maßstab 2, Offset exakt per Korrelation bestimmt)
   übernommen: 6 Häuser stehen exakt an den markierten Stellen (ggf. wenige px nach Osten versetzt, damit sie
   nicht auf der Straße stehen; dort befindliche OSM-Gebäude wurden ersetzt). Weitere 9 Häuser ergänzen die
-  Reihe an den übrigen Zufahrten — insgesamt 15 California-Häuser.
+  Reihe an den übrigen Zufahrten — insgesamt 14 California-Häuser (einzeln, nie aufgeteilt/überlappend).
   Maße: **15 m breit × 8 m tief, 10 m hoch**, **begrüntes Flachdach** (`roof=flat`, Dach grün),
   plus **Dachterrasse Nord und Süd, je 2 m** (helle Streifen an den Schmalseiten). Besonders
-  detailliert: in 2D grünes Dach + Terrassenstreifen, in 3D eigene Haustruppe (10 m hoch, grünes
-  Dach, Attika/Parapet, zwei Terrassenplatten mit Geländer an Nord/Süd). Name:
-  „Sahle California · James-Monroe-Ring“.
+  detailliert und **alle mit identischem Design**: in 2D grünes Dach + Terrassenstreifen; in 3D
+  **beige Putzfassade mit Fenstern und Tür** (dunkle Fenster an beiden Längsseiten und Giebeln,
+  braune Haustür), **nur die Dachfläche ist grün** (keine Attika mehr), zwei Terrassenplatten
+  mit Geländer an Nord/Süd. Name: „Sahle California · James-Monroe-Ring“.
 - **Franklin Loop direkt aus OSM**: der reale, beleuchtete Rundweg ist als eigene Wege
   („Loop“, ~3,3 km, 19 Segmente) kartiert und wird 1:1 übernommen.
+- **Kreisverkehr (Wasserwerkstr. / James-Monroe-Ring / Franklin-D.-Roosevelt-Str.)**: als Ring aus OSM
+  übernommen und als echter Kreisverkehr gezeichnet (schmalere Ringfahrbahn + grüne Mittelinsel).
+- **POIs gegen OSM geprüft**: es gibt **keinen Wasserturm** in Franklin (POI entfernt); Respawn liegt an der
+  echten **Hausarztpraxis-Franklin**; **FRANKLINSCHULE** und **FRANKLIN KLINIK** sind als gelabelte POIs
+  eingetragen (Gebäude existieren zudem als benannte OSM-Gebäude).
 - **Straßenbahn exakt auf den realen Schienen**: die neue **Linie 16** (Bensheimer Straße →
   Franklin Mitte → Franklinschule → Sullivan, 1,8 km) plus OEG (Linie 5/15) liegen als Schienennetz
   vor; darauf fahren Straßenbahnen (2D + 3D).

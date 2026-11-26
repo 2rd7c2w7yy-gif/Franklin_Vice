@@ -107,7 +107,7 @@ const World = {
       for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
       const len = cum[cum.length - 1];
       if (len < 30) continue;
-      const w = { pts, cum, len, cls: rw.c, name: rw.n, width: this.ROAD_WIDTHS[rw.c] || 8, a: rw.a, b: rw.b };
+      const w = { pts, cum, len, cls: rw.c, name: rw.n, width: this.ROAD_WIDTHS[rw.c] || 8, a: rw.a, b: rw.b, rb: rw.rb || 0 };
       w.idx = this.roadWays.length;
       this.roadWays.push(w);
       const idx = this.roadWays.length - 1;
@@ -721,24 +721,36 @@ const World = {
     g.lineJoin = 'round';
     for (const w of this.roadWays) {
       const isPath = w.cls === 'path';
+      const pw = w.rb ? Math.min(w.width, 9) : w.width;
       g.strokeStyle = isPath ? '#8a8272' : '#8f939b';
-      g.lineWidth = w.width + (isPath ? 3 : 5);
+      g.lineWidth = pw + (isPath ? 3 : 5);
       this.strokeWay(g, w);
     }
     for (const w of this.roadWays) {
       const big = w.width >= 15;
+      const pw = w.rb ? Math.min(w.width, 9) : w.width;
       g.strokeStyle = w.cls === 'path' ? '#6b6357' : big ? '#2c2f34' : '#33363c';
-      g.lineWidth = w.width;
+      g.lineWidth = pw;
       this.strokeWay(g, w);
     }
     g.setLineDash([20, 18]);
     for (const w of this.roadWays) {
-      if (w.width < 8) continue;
+      const pw = w.rb ? Math.min(w.width, 9) : w.width;
+      if (pw < 8) continue;
       g.strokeStyle = w.width >= 15 ? '#e8e8e8' : '#d8c84a';
       g.lineWidth = 3;
       this.strokeWay(g, w);
     }
     g.setLineDash([]);
+    for (const w of this.roadWays) {
+      if (!w.rb) continue;
+      g.fillStyle = '#77894f';
+      g.beginPath();
+      g.moveTo(w.pts[0][0], w.pts[0][1]);
+      for (let i = 1; i < w.pts.length; i++) g.lineTo(w.pts[i][0], w.pts[i][1]);
+      g.closePath();
+      g.fill();
+    }
     for (const [node, entries] of this.nodeMap) {
       if (entries.length < 3) continue;
       const p = this.nodePos.get(node);
@@ -845,19 +857,26 @@ const World = {
       }
     }
 
-    for (const key of ['station', 'wasserturm', 'respawn', 'plaza', 'friedhof', 'gate']) {
+    for (const key of ['station', 'schule', 'klinik', 'respawn', 'plaza', 'friedhof', 'gate']) {
       const p = this.pois[key];
       if (!p) continue;
       g.fillStyle = 'rgba(0,0,0,0.5)';
       g.font = 'bold 17px Verdana, sans-serif';
       const wpx = g.measureText(p.label).width + 16;
       g.fillRect(p.x - wpx / 2, p.y - 46, wpx, 24);
-      g.fillStyle = key === 'respawn' ? '#ff8a8a' : key === 'station' ? '#9ecbff' : '#fff';
+      g.fillStyle = key === 'respawn' ? '#ff8a8a' : key === 'station' ? '#9ecbff' : key === 'schule' ? '#9fe8a9' : key === 'klinik' ? '#ffb3b3' : '#fff';
       g.fillText(p.label, p.x, p.y - 29);
-      if (key === 'wasserturm') {
-        g.fillStyle = '#c9a86a';
-        g.beginPath(); g.arc(p.x, p.y, 14, 0, 7); g.fill();
-        g.strokeStyle = '#5a4632'; g.lineWidth = 3; g.stroke();
+      if (key === 'schule') {
+        g.fillStyle = '#3d6b4f';
+        g.beginPath(); g.arc(p.x, p.y, 13, 0, 7); g.fill();
+        g.strokeStyle = '#dff5e3'; g.lineWidth = 2.5; g.stroke();
+      }
+      if (key === 'klinik') {
+        g.fillStyle = '#d32f2f';
+        g.beginPath(); g.arc(p.x, p.y, 13, 0, 7); g.fill();
+        g.fillStyle = '#fff';
+        g.fillRect(p.x - 3, p.y - 9, 6, 18);
+        g.fillRect(p.x - 9, p.y - 3, 18, 6);
       }
       if (key === 'respawn') {
         g.fillStyle = '#d32f2f';

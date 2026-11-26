@@ -278,10 +278,14 @@ const Game = {
       if (this.mode === '2d') {
         const iv = this.inputVector();
         if (iv.x !== 0 || iv.y !== 0) {
-          const target = Math.atan2(iv.y, iv.x);
+          let mx = iv.x, my = iv.y;
+          let wa = World.wayAt(p.x, p.y, Math.atan2(iv.y, iv.x));
+          if (!wa) wa = World.wayAt(p.x, p.y, p.angle);
+          if (wa && wa.d < wa.width / 2 + 5) { mx = Math.cos(wa.ang); my = Math.sin(wa.ang); }
+          const target = Math.atan2(my, mx);
           p.angle += angleDiff(target, p.angle) * Math.min(1, 14 * dt);
-          p.vx += iv.x * CFG.PLAYER_ACCEL * dt;
-          p.vy += iv.y * CFG.PLAYER_ACCEL * dt;
+          p.vx += mx * CFG.PLAYER_ACCEL * dt;
+          p.vy += my * CFG.PLAYER_ACCEL * dt;
         }
       } else {
       const fwd = (this.keys.KeyW || this.keys.ArrowUp) ? 1 : (this.keys.KeyS || this.keys.ArrowDown) ? -1 : 0;
