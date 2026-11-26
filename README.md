@@ -178,6 +178,10 @@ Ablauf:
    jederzeit manuell änderbar). Dachfarbe + Dachhöhe kommen aus der sichtbaren Dachfläche; aus Dachhöhe/Hausbreite und dem
    Kamerawinkel wird die **Tiefe geschätzt** (≈ Dachhöhe / sin(Winkel) × Breite). Die Vorschau und die 3D-Fassadentextur zeichnen
    die Öffnungen an ihren **individuellen Positionen**. Dazu Auto-Erkennung „Schräg-/Seitenansicht“ vs. „Dachaufsicht“.
+   Die Dunkelmaske arbeitet mit **lokalem Kontrast** (Pixel vs. lokalem Hintergrund per Box-Blur), daher werden Fenster auch bei
+   Dämmerung/ungleichmäßig beleuchteten Fotos gefunden; breite Schattenbänder (Fensterreihen im Schatten) werden anhand der
+   erkannten Fensterspalten in Einzelrechtecke zerlegt. Hauskanten kommen aus Kanten- + Fassadenfarben-Spaltenprofil,
+   Fassadenfarbe aus den beleuchteten Flächen, Gebäudehöhe unten aus dem letzten Inhalts-Zeilenblock.
    Alle Werte sind per Regler nachträglich anpassbar; Vorschau zeigt die entstehende Grafik.
 3. **OSM-Abgleich**: Liegt EXIF-GPS vor, wird das nächstgelegene OSM-Gebäude in `geodata.js` gesucht —
    per Klick übernimmt das Modul dessen **Ausrichtung** (Winkel der längsten Kante) und optional
