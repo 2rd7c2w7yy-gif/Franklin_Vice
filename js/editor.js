@@ -145,37 +145,70 @@ const Editor = {
     const floorPks = peaks(rs, Math.max(9, Math.round(H / 9)), 0.55);
     const colPksAll = peaks(cs, Math.max(6, Math.round(W / 24)), 0.3);
     const isDach = mode === 'dach' || (mode === 'auto' && floorPks.length < 3 && colPksAll.length < 3);
-    let floors, wins, doors;
-    if (isDach) {
-      floors = 1; wins = 0; doors = 0;
-    } else {
-      floors = Math.max(2, Math.min(8, floorPks.length + 1));
-      const y0 = floorPks.length ? floorPks[0] : Math.round(H * 0.3);
-      const y1 = floorPks.length ? floorPks[floorPks.length - 1] : Math.round(H * 0.9);
-      let band = new Float32Array(W);
-      for (let x = 1; x < W - 1; x++) for (let y = Math.max(1, y0 + 3); y < Math.min(H - 1, y1); y++) band[x] += Math.abs(gxm[y * W + x]);
-      const winPks = peaks(smooth(band, 2), Math.max(6, Math.round(W / 24)), 0.3);
-      wins = Math.max(1, Math.min(8, Math.round(winPks.length / 2)));
-      let darkCols = 0;
-      for (let x = Math.floor(W * 0.3); x < Math.ceil(W * 0.7); x++) {
-        let m = 0, n = 0;
-        for (let y = Math.round(H * 0.78); y < H - 1; y++) { m += gray[y * W + x]; n++; }
-        if (n && m / n < stats(gray).mean - 28) darkCols++;
-      }
-      doors = darkCols > W * 0.06 ? 2 : 1;
-    }
     const avg = (x0f, x1f, y0f, y1f) => {
       let r = 0, gg = 0, b = 0, n = 0;
-      for (let y = Math.floor(H * y0f); y < Math.min(H, Math.ceil(H * y1f)); y++) for (let x = Math.floor(W * x0f); x < Math.min(W, Math.ceil(W * x1f)); x++) {
+      for (let y = Math.max(0, Math.floor(H * y0f)); y < Math.min(H, Math.ceil(H * y1f)); y++) for (let x = Math.max(0, Math.floor(W * x0f)); x < Math.min(W, Math.ceil(W * x1f)); x++) {
         const i = (y * W + x) * 4; r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++;
       }
       if (!n) return '#cccccc';
       const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
       return '#' + hex(r) + hex(gg) + hex(b);
     };
-    const facade = isDach ? '#cfcfcf' : avg(0.18, 0.82, 0.35, 0.78);
-    const roofColor = isDach ? avg(0.1, 0.9, 0.1, 0.9) : FacadeLib.shade(facade, -50);
-    return { facade, roofColor, floors, wins, doors, roofShape: 'flat', isDach, wM: 15, dM: 8, hM: floors * 3 };
+    const avgAbs = (x0, x1, y0, y1) => {
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let y = Math.max(0, Math.floor(y0)); y < Math.min(H, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) {
+        const i = (y * W + x) * 4; r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++;
+      }
+      if (!n) return '#cccccc';
+      const hex = (v) => Math.round(v / n).toString(16).padStart(2, '0');
+      return '#' + hex(r) + hex(gg) + hex(b);
+    };
+    let floors, wins, doors, roofColor, facade, roofVis = false, bWidthPx = W, roofDepthPx = 0;
+    if (isDach) {
+      floors = 1; wins = 0; doors = 0;
+      facade = '#cfcfcf';
+      roofColor = avg(0.1, 0.9, 0.1, 0.9);
+    } else {
+      const rowMax = Math.max(...rs);
+      let bTop = Math.round(H * 0.2), topV = 0;
+      for (let y = Math.floor(H * 0.04); y < Math.floor(H * 0.62); y++) if (rs[y] > topV) { topV = rs[y]; bTop = y; }
+      let eave = -1, eaveV = 0;
+      for (let y = bTop + 6; y < Math.min(H - 2, bTop + (H - bTop) * 0.65); y++) if (rs[y] > eaveV) { eaveV = rs[y]; eave = y; }
+      const hasEave = eave > bTop && eaveV > rowMax * 0.22 && (eave - bTop) >= 5;
+      let fBot = H - 2, fbV = 0;
+      for (let y = Math.floor(H * 0.62); y < H - 1; y++) if (rs[y] > fbV) { fbV = rs[y]; fBot = y; }
+      const facTop = hasEave ? eave + 3 : bTop + 3;
+      const facBot = Math.max(facTop + 8, fBot - 2);
+      const facRows = [];
+      for (let y = facTop; y <= facBot; y++) facRows.push(rs[y]);
+      const fPks = peaks(new Float32Array(facRows), Math.max(9, Math.round(H / 9)), 0.4);
+      floors = Math.max(2, Math.min(8, fPks.length + 1));
+      let band = new Float32Array(W);
+      for (let x = 1; x < W - 1; x++) for (let y = facTop; y <= facBot; y++) band[x] += Math.abs(gxm[y * W + x]);
+      const bs = smooth(band, 2);
+      const winPks = peaks(bs, Math.max(6, Math.round(W / 24)), 0.3);
+      wins = Math.max(1, Math.min(8, Math.round(winPks.length / 2)));
+      const strong = [];
+      for (const p of winPks) if (bs[p] > Math.max(...bs) * 0.35) strong.push(p);
+      bWidthPx = strong.length >= 2 ? Math.max(...strong) - Math.min(...strong) : W * 0.8;
+      let darkCols = 0;
+      const dTop = fBot - (fBot - facTop) * 0.28;
+      for (let x = Math.floor(W * 0.3); x < Math.ceil(W * 0.7); x++) {
+        let m = 0, n = 0;
+        for (let y = Math.max(0, Math.round(dTop)); y < H - 1; y++) { m += gray[y * W + x]; n++; }
+        if (n && m / n < stats(gray).mean - 28) darkCols++;
+      }
+      doors = darkCols > W * 0.06 ? 2 : 1;
+      facade = avgAbs(W * 0.15, W * 0.85, facTop + (facBot - facTop) * 0.2, facBot - 2);
+      if (hasEave) {
+        roofColor = avgAbs(W * 0.15, W * 0.85, bTop + 1, eave - 1);
+        roofDepthPx = eave - bTop;
+        roofVis = roofDepthPx >= 6;
+      } else {
+        roofColor = FacadeLib.shade(facade, -50);
+      }
+    }
+    return { facade, roofColor, floors, wins, doors, roofShape: 'flat', isDach, wM: 15, dM: 8, hM: floors * 3, roofVis, bWidthPx, roofDepthPx };
   },
 
   currentParams() {
@@ -189,8 +222,20 @@ const Editor = {
       roofShape: document.getElementById('pRoofShape').value,
       wM: Math.max(4, Math.min(60, parseFloat(document.getElementById('pW').value) || 15)),
       dM: Math.max(4, Math.min(40, parseFloat(document.getElementById('pD').value) || 8)),
-      hM: Math.max(3, Math.min(30, (Math.max(1, parseInt(document.getElementById('pFloors').value) || 1)) * 3))
+      hM: Math.max(3, Math.min(30, (Math.max(1, parseInt(document.getElementById('pFloors').value) || 1)) * 3)),
+      roofVis: !!(Editor.params && Editor.params.roofVis),
+      bWidthPx: (Editor.params && Editor.params.bWidthPx) || 0,
+      roofDepthPx: (Editor.params && Editor.params.roofDepthPx) || 0,
+      camAngle: Math.max(10, Math.min(80, parseFloat(document.getElementById('pAngle').value) || 30))
     };
+  },
+
+  suggestDepth() {
+    const p = Editor.params;
+    if (!p || !p.roofVis || !p.bWidthPx || p.bWidthPx < 20) return null;
+    const ang = (Math.max(10, Math.min(80, parseFloat(document.getElementById('pAngle').value) || 30))) * Math.PI / 180;
+    const wM = Math.max(4, parseFloat(document.getElementById('pW').value) || 15);
+    return p.roofDepthPx / p.bWidthPx * wM / Math.sin(ang);
   },
 
   refreshPreview() {
@@ -277,6 +322,14 @@ const Editor = {
         }
         document.getElementById('osmBox').style.display = Editor.osm ? 'block' : 'none';
         if (Editor.osm) document.getElementById('osmInfo').textContent = 'OSM: „' + Editor.osm.name + '“ — ' + Editor.osm.wM.toFixed(1) + '×' + Editor.osm.dM.toFixed(1) + ' m, ' + Math.round(Editor.osm.angle * 180 / Math.PI) + '°';
+        if (Editor.params.roofVis && !Editor.osm) {
+          const dEst = Editor.suggestDepth();
+          if (dEst) {
+            document.getElementById('pD').value = Math.round(Math.max(4, Math.min(40, dEst)) * 2) / 2;
+            info += '\n📐 Schrägansicht: Dach sichtbar (' + Editor.params.roofDepthPx + ' px Dachhöhe bei ' + Editor.params.bWidthPx.toFixed(0) + ' px Hausbreite) → Tiefe geschätzt: ' + dEst.toFixed(1) + ' m (bei ' + (parseFloat(document.getElementById('pAngle').value) || 30) + '° Kamerawinkel) — anpassbar';
+          }
+        } else if (Editor.params.roofVis) info += '\n📐 Schrägansicht erkannt (Dach sichtbar) — OSM-Grundriss hat Vorrang, sonst Tiefe manuell';
+        document.getElementById('info').textContent = info;
         document.getElementById('analyzePanel').style.display = 'block';
         const scv = document.getElementById('srcCv');
         const sg = scv.getContext('2d');
@@ -304,7 +357,7 @@ const Editor = {
       drop.classList.remove('over');
       if (e.dataTransfer.files[0]) Editor.loadFile(e.dataTransfer.files[0]);
     };
-    for (const id of ['pName', 'pW', 'pD', 'pFloors', 'pWins', 'pDoors', 'pRoofShape', 'pFacade', 'pRoof', 'pMode']) {
+    for (const id of ['pName', 'pW', 'pD', 'pFloors', 'pWins', 'pDoors', 'pRoofShape', 'pFacade', 'pRoof', 'pMode', 'pAngle']) {
       document.getElementById(id).addEventListener('input', () => {
         if (id === 'pMode' && Editor.img) {
           Editor.params = Editor.analyze(Editor.img, document.getElementById('pMode').value);

@@ -55,14 +55,34 @@ const FacadeLib = {
     const floors = Math.max(1, f.floors | 0);
     const fh = Math.max(30, Math.min(52, w / Math.max(2, (f.wins | 0) + 1) * 1.15));
     const h = fh * (floors + 0.35);
+    const sk = f.roofVis ? w * 0.3 : 0;
     g.fillStyle = '#87c5e8';
-    g.fillRect(x - 14, y - 14, w + 28, h + 42);
+    g.fillRect(x - 14, y - sk - 14, w + 28, h + sk + 42);
     g.fillStyle = f.roofColor || '#8a8a8a';
     if (f.roofShape === 'gabled') {
       g.beginPath();
       g.moveTo(x - 4, y + 6);
       g.lineTo(x + w / 2, y - fh * 0.55);
       g.lineTo(x + w + 4, y + 6);
+      g.closePath();
+      g.fill();
+    } else if (f.roofVis) {
+      g.beginPath();
+      g.moveTo(x - 4, y + 6);
+      g.lineTo(x + sk, y + 6 - sk * 0.8);
+      g.lineTo(x + w + 4 + sk, y + 6 - sk * 0.8);
+      g.lineTo(x + w + 4, y + 6);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = 'rgba(0,0,0,0.45)';
+      g.lineWidth = 1.5;
+      g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.18)';
+      g.beginPath();
+      g.moveTo(x + w * 0.2, y + 6 - sk * 0.16);
+      g.lineTo(x + w * 0.35, y + 6 - sk * 0.28);
+      g.lineTo(x + w * 0.55, y + 6 - sk * 0.28);
+      g.lineTo(x + w * 0.4, y + 6 - sk * 0.16);
       g.closePath();
       g.fill();
     } else {

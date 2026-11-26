@@ -38,7 +38,7 @@
 <main>
   <div class="panel">
     <h2>1 · Foto / Screenshot hochladen</h2>
-    <div id="drop">📷 Hier klicken oder Datei hineinziehen — Foto des Hauses (am besten mit EXIF-GPS) oder Screenshot aus einer Karten-App (Dachaufsicht)<br>
+    <div id="drop">📷 Hier klicken oder Datei hineinziehen — Foto des Hauses (am besten mit EXIF-GPS, typischerweise ca. 30° von vorn/oben, sodass Fassade UND Dach sichtbar sind) oder Screenshot aus einer Karten-App (Dachaufsicht)<br>
       <span class="small">Das Foto selbst wird nicht im Spiel angezeigt und nicht gespeichert — nur abgeleitete Maße, Etagen, Fenster, Farben. Bitte keine Google/Apple-StreetView-Bilder verwenden (ToS).</span>
     </div>
     <input type="file" id="file" accept="image/*" style="display:none">
@@ -60,7 +60,8 @@
       <label>Dachform <select id="pRoofShape"><option value="flat">Flachdach</option><option value="gabled">Satteldach</option></select></label>
       <label>Fassade <input type="color" id="pFacade" value="#d4c9b8"></label>
       <label>Dach <input type="color" id="pRoof" value="#6a4a3a"></label>
-      <label>Ansicht <select id="pMode"><option value="auto">Auto</option><option value="fassade">Hausfoto (Seitenansicht)</option><option value="dach">Karten-Screenshot (Dachaufsicht)</option></select></label>
+      <label>Ansicht <select id="pMode"><option value="auto">Auto</option><option value="fassade">Hausfoto (Schräg-/Seitenansicht)</option><option value="dach">Karten-Screenshot (Dachaufsicht)</option></select></label>
+      <label>Kamerawinkel Foto <input type="number" id="pAngle" min="10" max="80" step="5" value="30">°</label>
     </div>
     <div id="osmBox" style="margin-top:8px; display:none">
       <span id="osmInfo" class="small"></span><br>
