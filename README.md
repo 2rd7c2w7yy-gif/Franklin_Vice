@@ -51,7 +51,12 @@ Es ist eine statische Web-App ohne Build-Schritt und ohne Abhängigkeiten:
 - **Sahle-California-Doppelhäuser (James-Monroe-Ring) am Alten Postweg**: Die California gehören zum
   **James-Monroe-Ring** (früher Grant Circle) und stehen in **zweiter Reihe hinter den alten
   Bestands-Doppelhäusern** (die bleiben als erste Reihe aus OSM erhalten). Die bereits kartierten
-  kurzen **Zufahrten** (Wege) zeigen auf jedes Haus — am Ende jedes Weges steht ein California.
+  kurzen **Zufahrten** (Wege) zeigen auf jedes Haus — am **alter-postweg-seitigen Ende** jedes Weges steht ein California
+  (zweite Reihe direkt hinter der ersten Reihe). **Die vom Nutzer markierten Positionen** (Screenshot mit
+  roten Markierungen) wurden per Screenshot→Welt-Transform (Maßstab 2, Offset exakt per Korrelation bestimmt)
+  übernommen: 6 Häuser stehen exakt an den markierten Stellen (ggf. wenige px nach Osten versetzt, damit sie
+  nicht auf der Straße stehen; dort befindliche OSM-Gebäude wurden ersetzt). Weitere 9 Häuser ergänzen die
+  Reihe an den übrigen Zufahrten — insgesamt 15 California-Häuser.
   Maße: **15 m breit × 8 m tief, 10 m hoch**, **begrüntes Flachdach** (`roof=flat`, Dach grün),
   plus **Dachterrasse Nord und Süd, je 2 m** (helle Streifen an den Schmalseiten). Besonders
   detailliert: in 2D grünes Dach + Terrassenstreifen, in 3D eigene Haustruppe (10 m hoch, grünes
