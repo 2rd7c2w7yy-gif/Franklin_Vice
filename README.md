@@ -180,8 +180,10 @@ Ablauf:
    die Öffnungen an ihren **individuellen Positionen**. Dazu Auto-Erkennung „Schräg-/Seitenansicht“ vs. „Dachaufsicht“.
    Die Dunkelmaske arbeitet mit **lokalem Kontrast** (Pixel vs. lokalem Hintergrund per Box-Blur), daher werden Fenster auch bei
    Dämmerung/ungleichmäßig beleuchteten Fotos gefunden; breite Schattenbänder (Fensterreihen im Schatten) werden anhand der
-   erkannten Fensterspalten in Einzelrechtecke zerlegt. Hauskanten kommen aus Kanten- + Fassadenfarben-Spaltenprofil,
-   Fassadenfarbe aus den beleuchteten Flächen, Gebäudehöhe unten aus dem letzten Inhalts-Zeilenblock.
+   erkannten Fensterspalten in Einzelrechtecke zerlegt. Hauskanten kommen aus Kanten- + Fassadenfarben-Spaltenprofil, Ober-/Unterkante des Gebäudes aus den stärksten
+   horizontalen Kanten (damit bleiben Bäume über dem Haus und Garten unten außen vor), Fassaden- und Dachfarbe aus den
+   mittleren 60 % der Hausbreite (dritte Dachband-Zeilen), Gebäudehöhe unten aus dem letzten Inhalts-Zeilenblock. Beim
+   Zusammenfähren von Komponenten wird die Breite begrenzt, damit Fenster nicht zu einem Riesen-Rechteck verschmelzen.
    Alle Werte sind per Regler nachträglich anpassbar; Vorschau zeigt die entstehende Grafik.
 3. **OSM-Abgleich**: Liegt EXIF-GPS vor, wird das nächstgelegene OSM-Gebäude in `geodata.js` gesucht —
    per Klick übernimmt das Modul dessen **Ausrichtung** (Winkel der längsten Kante) und optional

@@ -105,15 +105,15 @@ const Editor = {
       c.width = w; c.height = h;
       const g = c.getContext('2d');
         if (Editor.exif && Editor.exif.orientation >= 5) {
-          g.translate(w / 2, h / 2);
-          g.rotate((Editor.exif.orientation % 4) * Math.PI / 2 * (Editor.exif.orientation >= 5 && Editor.exif.orientation <= 8 ? 1 : -1));
-          if (Editor.exif.orientation === 6 || Editor.exif.orientation === 8) { /* handled by rotate */ }
-          g.drawImage(img, -h / 2, -w / 2, h, w);
-          if (Editor.exif.orientation >= 5) { const t = c.width; c.width = h; c.height = w; }
-        } else {
-          g.drawImage(img, 0, 0, w, h);
-        }
-        const g2 = c.getContext('2d');
+                  g.translate(w / 2, h / 2);
+                  g.rotate((Editor.exif.orientation % 4) * Math.PI / 2 * (Editor.exif.orientation >= 5 && Editor.exif.orientation <= 8 ? 1 : -1));
+                  if (Editor.exif.orientation === 6 || Editor.exif.orientation === 8) { /* handled by rotate */ }
+                  g.drawImage(img, -h / 2, -w / 2, h, w);
+                  if (Editor.exif.orientation >= 5) { const t = c.width; c.width = h; c.height = w; }
+                } else {
+                  g.drawImage(img, 0, 0, w, h);
+                }
+                const g2 = c.getContext('2d');
       const W = c.width, H = c.height;
       const d = g2.getImageData(0, 0, W, H).data;
       const gray = new Float32Array(W * H);
@@ -177,6 +177,8 @@ const Editor = {
       }
       let maxW = W * 0.2;
       for (let y = 0; y < H; y++) if (rowW[y] > maxW) maxW = rowW[y];
+      const rowPeaks = [];
+      for (let y = 3; y < H - 3; y++) if (rs[y] >= rowMax * 0.45 && rs[y] >= rs[y - 1] && rs[y] >= rs[y + 1] && rs[y] > rs[y - 3] && rs[y] > rs[y + 3]) rowPeaks.push(y);
       let bTop = 0;
       for (let y = 0; y < Math.floor(H * 0.8); y++) {
         if (rowW[y] > maxW * 0.35) {
@@ -187,6 +189,12 @@ const Editor = {
       }
       let fBot = H - 1;
       for (let y = H - 1; y > Math.floor(H * 0.2); y--) if (rowW[y] > maxW * 0.08) { fBot = y; break; }
+      const topP = rowPeaks.filter(y => y < H * 0.6);
+      const botP = rowPeaks.filter(y => y > H * 0.4);
+      const bTopW = bTop, fBotW = fBot;
+      if (topP.length) bTop = Math.max(bTopW, topP[0]);
+      if (botP.length) fBot = Math.max(fBotW, botP[botP.length - 1]);
+      if (fBot - bTop < H * 0.3) { bTop = 0; fBot = H - 1; }
       const facadeMode = rowMode[Math.max(bTop + 4, Math.round(fBot - (fBot - bTop) * 0.25))];
       let eave = -1, eaveJump = 0;
       const eLo = bTop + 3, eHi = Math.min(fBot, bTop + (fBot - bTop) * 0.35);
@@ -283,12 +291,13 @@ const Editor = {
       }
       const facTop = facTop0;
       const facW = Math.max(10, bRight - bLeft), facH = Math.max(10, facBot - facTop);
+      const cx0 = Math.round(bLeft + spanW * 0.2), cx1 = Math.round(bRight - spanW * 0.2);
       let fr = 0, fg = 0, fb = 0, fn = 0;
-      for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
+      for (let y = facTop; y <= facBot; y++) for (let x = cx0; x <= cx1; x++) {
         const i = y * W + x;
         if (!darkM[i] && gray[i] > bg[i] + 6) { fr += d[i * 4]; fg += d[i * 4 + 1]; fb += d[i * 4 + 2]; fn++; }
       }
-      if (fn < facW * facH * 0.05) {
+      if (fn < (cx1 - cx0) * facH * 0.05) {
         fr = 0; fg = 0; fb = 0; fn = 0;
         for (let y = facTop; y <= facBot; y++) for (let x = bLeft; x <= bRight; x++) {
           const i = y * W + x;
@@ -324,7 +333,7 @@ const Editor = {
       for (let m = 0; m < 3; m++) {
         for (let i = 0; i < comps.length; i++) for (let j = i + 1; j < comps.length; j++) {
           const a = comps[i], b = comps[j];
-          if (a.minX - 3 <= b.maxX && b.minX - 3 <= a.maxX && a.maxY >= b.minY - 2 && b.maxY >= a.minY - 2) {
+          if (a.minX - 3 <= b.maxX && b.minX - 3 <= a.maxX && a.maxY >= b.minY - 2 && b.maxY >= a.minY - 2 && Math.max(a.maxX, b.maxX) - Math.min(a.minX, b.minX) + 1 <= facW * 0.3 && Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY) + 1 >= 0.4 * Math.min(a.h, b.h)) {
             a.minX = Math.min(a.minX, b.minX); a.maxX = Math.max(a.maxX, b.maxX);
             a.minY = Math.min(a.minY, b.minY); a.maxY = Math.max(a.maxY, b.maxY);
             a.w = a.maxX - a.minX + 1; a.h = a.maxY - a.minY + 1; a.area += b.area;
@@ -467,7 +476,11 @@ const Editor = {
         roofDepthPx = eave - bTop;
         roofVis = roofDepthPx >= 6;
         let rr = 0, rg = 0, rb = 0, rn = 0;
-        for (let y = bTop + 1; y < eave; y++) { rr += rowMode[y][0]; rg += rowMode[y][1]; rb += rowMode[y][2]; rn++; }
+        const r0 = Math.round(bTop + 1 + (eave - bTop - 1) * 0.3), r1 = Math.round(bTop + 1 + (eave - bTop - 1) * 0.7);
+        for (let y = r0; y <= r1; y++) for (let x = cx0; x <= cx1; x++) {
+          const i = (y * W + x) * 4; rr += d[i]; rg += d[i + 1]; rb += d[i + 2]; rn++;
+        }
+        if (!rn) { for (let y = bTop + 1; y < eave; y++) { rr += rowMode[y][0]; rg += rowMode[y][1]; rb += rowMode[y][2]; rn++; } }
         const hexR = (v) => Math.round(v / Math.max(1, rn)).toString(16).padStart(2, '0');
         roofColor = rn ? '#' + hexR(rr) + hexR(rg) + hexR(rb) : '#888888';
         const depthRatio = roofDepthPx / Math.max(1, bWidthPx);
