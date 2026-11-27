@@ -184,6 +184,11 @@ Ablauf:
    horizontalen Kanten (damit bleiben Bäume über dem Haus und Garten unten außen vor), Fassaden- und Dachfarbe aus den
    mittleren 60 % der Hausbreite (dritte Dachband-Zeilen), Gebäudehöhe unten aus dem letzten Inhalts-Zeilenblock. Beim
    Zusammenfähren von Komponenten wird die Breite begrenzt, damit Fenster nicht zu einem Riesen-Rechteck verschmelzen.
+      Zusätzlich wird die **Gebäudeform** erfasst: Ist die oberste Etage gegenüber den unteren eingerückt
+   (zeilenweise dunkle Spanne oben schmaler als unten), erkennt das Modul **Dachterrassen / ein Staffelgeschoss**
+   (beidseitig oder eine Seite, Tiefe in m) — per Select + Regler jederzeit manuell setzbar. Die Terrassen werden in der
+   Vorschau, in der 3D-Fassadentextur (oberstes Geschoss eingerückt), in der 2D-Karte (Dachfläche mit Stufe) und im
+   Platzier-Ghost (gestrichelter Innenumriss) sowie in 3D als zweiter, eingerückter Quader dargestellt.
    Alle Werte sind per Regler nachträglich anpassbar; Vorschau zeigt die entstehende Grafik.
 3. **OSM-Abgleich**: Liegt EXIF-GPS vor, wird das nächstgelegene OSM-Gebäude in `geodata.js` gesucht —
    per Klick übernimmt das Modul dessen **Ausrichtung** (Winkel der längsten Kante) und optional
@@ -196,7 +201,7 @@ Ablauf:
    auflisten, löschen, neu platzieren und als **JSON exportieren/importieren** (z. B. `custom_buildings.json`
    fürs Repo). Eigene Gebäude unterliegen denselben Regeln wie OSM-Gebäude (nie auf Wegen, Kollision etc.).
 
-Dateien: `editor.html`, `js/editor.js`, `js/facade.js`.
+Dateien: `editor.html`, `js/editor.js`, `js/facade.js` (+ Darstellung in `js/map.js`, `js/render3d.js`, `js/main.js`).
 
 Robustheit: Start- und Render-Fehler werden nicht mehr als schwarzer Bildschirm angezeigt,
 sondern als rote Fehlermeldung auf dem Canvas (Init-Fehler) bzw. Fehler-Banner im Loop.

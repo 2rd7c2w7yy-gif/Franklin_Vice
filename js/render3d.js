@@ -107,7 +107,11 @@ const Render3D = {
         else shape.lineTo(x, -y);
       });
       const h3 = isCal ? 9.2 : (b.facade && b.facade.hM ? b.facade.hM : (b.lvl ? 7 + b.lvl * 9 : 20 + (Math.abs((b.cx * 31 + b.cy * 17) | 0) % 48)));
-      const hExtr = isCal ? 6.3 : h3;
+      const terr = (b.facade && b.facade.terr && b.facade.terr.m > 0 && (b.facade.floors | 0) >= 2) ? b.facade.terr : null;
+      const stepM = isCal ? 2 : (terr ? Math.min(6, terr.m) : 0);
+      const stepH = stepM > 0 ? (isCal ? h3 - 6.3 : Math.max(2.5, h3 / Math.max(2, (b.facade.floors | 0)))) : 0;
+      const hLow = stepM > 0 ? Math.max(2, h3 - stepH) : h3;
+      const hExtr = stepM > 0 ? (isCal ? 6.3 : hLow) : h3;
       const geo = new THREE.ExtrudeGeometry(shape, { depth: hExtr, bevelEnabled: false, curveSegments: 2 });
       geo.rotateX(-Math.PI / 2);
       const tint = new THREE.Color(isCal ? 0xd8c7a3 : (b.facade && b.facade.facade ? b.facade.facade : b.color));
@@ -148,7 +152,7 @@ const Render3D = {
         roofMesh.position.y = h3;
         this.scene.add(roofMesh);
       }
-      if (isCal) {
+      if (stepM > 0) {
         let bi = 0, bl = 0, bs = 0;
         for (let i = 0; i < b.pts.length; i++) {
           const q = b.pts[(i + 1) % b.pts.length];
@@ -159,13 +163,19 @@ const Render3D = {
         let dx = q[0] - b.pts[bi][0], dy = q[1] - b.pts[bi][1];
         const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
         const ux = dx, uy = dy, nx = -uy, ny = ux;
-        const t = 2 * 0.92;
-        const hLow = 6.3, hTop = h3 - hLow;
+        const t = stepM * 0.92;
+        const hTop = h3 - hLow;
         const ys4 = b.pts.slice(0, 4).map(p => p[1]);
         const extY = Math.max(...ys4) - Math.min(...ys4);
         const cyMin = Math.min(...ys4), cyMax = Math.max(...ys4);
         const shapeU = new THREE.Shape();
-        const upPts = b.pts.slice(0, 4).map(p => [p[0], b.cy + Math.max(cyMin + t - b.cy, Math.min(cyMax - t - b.cy, p[1] - b.cy))]);
+        const sideSel = terr ? terr.sides : 'both';
+        const upPts = b.pts.slice(0, 4).map(p => {
+          let y2 = p[1];
+          if (sideSel === 'both' || sideSel === 'left') y2 = Math.min(y2, cyMax - t);
+          if (sideSel === 'both' || sideSel === 'right') y2 = Math.max(y2, cyMin + t);
+          return [p[0], y2];
+        });
         let blU = 0;
         upPts.forEach((p, i) => {
           const rx = p[0] - b.cx, ry = p[1] - b.cy;
@@ -178,6 +188,7 @@ const Render3D = {
         const upper = new THREE.Mesh(geoU, [capMat, sideMat]);
         upper.position.y = hLow;
         this.scene.add(upper);
+        if (isCal) {
         const tg = new THREE.Group();
         tg.position.set(b.cx, 0, b.cy);
         tg.rotation.y = Math.atan2(-dy, dx);
@@ -213,6 +224,7 @@ const Render3D = {
         door.position.set(0, 1.05, bs / 2 + 0.07);
         tg.add(door);
         this.scene.add(tg);
+        }
       }
     }
 

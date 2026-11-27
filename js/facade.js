@@ -6,6 +6,25 @@ const FacadeLib = {
     return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
   },
 
+  terrStrips(g, f, w, h) {
+    const t = f.terr;
+    if (!t || !t.m || t.m <= 0 || (f.floors | 0) < 2 || !f.wM) return null;
+    const floors = Math.max(1, f.floors | 0);
+    const fh = h / (floors + 0.35);
+    const y0 = h - fh * 1.02, y1 = h;
+    const fr = Math.max(0, Math.min(0.45, t.m / f.wM));
+    const lw = (t.sides === 'both' || t.sides === 'left') ? w * fr : 0;
+    const rw = (t.sides === 'both' || t.sides === 'right') ? w * fr : 0;
+    const col = FacadeLib.shade(f.roofColor || '#8a8a8a', 26);
+    if (lw > 1) { g.fillStyle = col; g.fillRect(0, y0, lw, y1 - y0); }
+    if (rw > 1) { g.fillStyle = col; g.fillRect(w - rw, y0, rw, y1 - y0); }
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillRect(0, y0, w, 2);
+    if (lw > 1) g.fillRect(lw, y0, 2, y1 - y0);
+    if (rw > 1) g.fillRect(w - rw - 2, y0, 2, y1 - y0);
+    return { y0, y1, lw, rw };
+  },
+
   drawTexture(g, f, w, h, seed) {
     let s = seed || 1;
     const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
@@ -14,6 +33,7 @@ const FacadeLib = {
     g.fillStyle = 'rgba(0,0,0,0.08)';
     for (let y = 0; y < h; y += 8) g.fillRect(0, y, w, 1);
     const floors = Math.max(1, f.floors | 0);
+    FacadeLib.terrStrips(g, f, w, h);
     const wins = Math.max(0, f.wins | 0);
     const doors = Math.max(0, Math.min(2, f.doors | 0));
     const fh = h / (floors + 0.35);
@@ -133,6 +153,15 @@ const FacadeLib = {
     g.translate(x, y);
     FacadeLib.drawTexture(g, f, w, h, seed);
     g.restore();
+    const ts = (f.terr && f.terr.m > 0 && floors >= 2 && f.wM) ? FacadeLib.terrStrips({ fillStyle: '', fillRect() {} }, f, w, h) : null;
+    if (ts) {
+      g.fillStyle = FacadeLib.shade(f.roofColor || '#8a8a8a', 40);
+      if (ts.lw > 1) g.fillRect(x, y + ts.y0, ts.lw, ts.y1 - ts.y0);
+      if (ts.rw > 1) g.fillRect(x + w - ts.rw, y + ts.y0, ts.rw, ts.y1 - ts.y0);
+      g.strokeStyle = 'rgba(0,0,0,0.5)';
+      g.lineWidth = 1.5;
+      g.strokeRect(x + ts.lw, y + ts.y0, w - ts.lw - ts.rw, ts.y1 - ts.y0);
+    }
     g.strokeStyle = 'rgba(0,0,0,0.6)';
     g.lineWidth = 2;
     g.strokeRect(x, y, w, h);
@@ -141,7 +170,7 @@ const FacadeLib = {
     g.fillStyle = '#fff';
     g.font = 'bold 13px Verdana, sans-serif';
     g.textAlign = 'center';
-    g.fillText((f.wM | 0) + ' m × ' + (f.dM | 0) + ' m · ' + floors + ' Etagen · Dach ' + (f.roofShape === 'gabled' ? 'Satteldach' : 'Flachdach'), x + w / 2, y + h + 19);
+    g.fillText((f.wM | 0) + ' m × ' + (f.dM | 0) + ' m · ' + floors + ' Etagen · Dach ' + (f.roofShape === 'gabled' ? 'Satteldach' : 'Flachdach') + (f.terr && f.terr.m > 0 ? ' · +Dachterrasse ' + f.terr.m + ' m' : ''), x + w / 2, y + h + 19);
   },
 
   makeCanvas(f, w, h, seed) {

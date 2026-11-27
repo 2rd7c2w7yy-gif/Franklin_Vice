@@ -494,7 +494,38 @@ const Editor = {
           else roofShape = depthRatio < 0.4 ? 'flat' : 'gabled';
         }
       }
-      return { facade, roofColor, floors, wins, doors, openings: openings.length ? openings : null, roofShape, isDach, roofVis, bWidthPx, roofDepthPx, wM: 15, dM: 8, hM: floors * 3 };
+      let terr = null;
+      if (floors >= 2 && facH > 30) {
+        const spanL = new Float32Array(H).fill(1e9), spanR = new Float32Array(H).fill(-1e9);
+        for (let y = facTop; y <= facBot; y++) {
+          for (let x = bLeft; x <= bRight; x++) if (darkM[y * W + x]) { if (x < spanL[y]) spanL[y] = x; if (x > spanR[y]) spanR[y] = x; }
+        }
+        const zone = (y0, y1) => {
+          let l = 1e9, r = -1e9;
+          for (let y = y0; y <= y1; y++) if (spanR[y] >= 0 && rowDarkF[y] > spanW * 0.04) { if (spanL[y] < l) l = spanL[y]; if (spanR[y] > r) r = spanR[y]; }
+          return r >= 0 ? [l, r] : null;
+        };
+        const topZ = zone(facTop, Math.round(facTop + facH * 0.34));
+        const lowZ = zone(Math.round(facTop + facH * 0.34), facBot);
+        if (topZ && lowZ) {
+          const inL = (topZ[0] - lowZ[0]) / facW, inR = (lowZ[1] - topZ[1]) / facW;
+          if (inL > 0.045 || inR > 0.045) terr = { l: +Math.max(0, inL).toFixed(3), r: +Math.max(0, inR).toFixed(3), sides: (inL > 0.045 && inR > 0.045) ? 'both' : (inL > 0.045 ? 'left' : 'right') };
+        }
+      }
+      return { facade, roofColor, floors, wins, doors, openings: openings.length ? openings : null, roofShape, isDach, roofVis, bWidthPx, roofDepthPx, terr, wM: 15, dM: 8, hM: floors * 3 };
+  },
+
+  setTerrFields() {
+    const p = Editor.params || {};
+    const t = p.terr;
+    if (t && (t.l > 0.045 || t.r > 0.045)) {
+      document.getElementById('pTerr').value = t.sides || 'both';
+      const wM = Math.max(4, parseFloat(document.getElementById('pW').value) || 15);
+      document.getElementById('pTerrM').value = Math.max(0.5, Math.round(Math.max(t.l, t.r) * wM * 2) / 2);
+    } else {
+      document.getElementById('pTerr').value = 'none';
+      document.getElementById('pTerrM').value = 2;
+    }
   },
 
   currentParams() {
@@ -513,7 +544,13 @@ const Editor = {
       bWidthPx: (Editor.params && Editor.params.bWidthPx) || 0,
       roofDepthPx: (Editor.params && Editor.params.roofDepthPx) || 0,
       openings: (Editor.params && Editor.params.openings) || null,
-      camAngle: Math.max(10, Math.min(80, parseFloat(document.getElementById('pAngle').value) || 30))
+      camAngle: Math.max(10, Math.min(80, parseFloat(document.getElementById('pAngle').value) || 30)),
+      terr: (() => {
+        const ts = document.getElementById('pTerr').value;
+        const tm = Math.max(0, Math.min(8, parseFloat(document.getElementById('pTerrM').value) || 0));
+        if (ts === 'none' || tm <= 0) return null;
+        return { sides: ts, m: tm };
+      })()
     };
   },
 
@@ -609,6 +646,7 @@ const Editor = {
         document.getElementById('pFacade').value = Editor.params.facade;
         document.getElementById('pRoof').value = Editor.params.roofColor;
         if (['flat', 'gabled', 'hip', 'pyramidal'].includes(Editor.params.roofShape)) document.getElementById('pRoofShape').value = Editor.params.roofShape;
+        Editor.setTerrFields();
         info += '\n🪟 ' + (Editor.params.openings ? Editor.params.openings.length + ' Öffnungen einzeln erkannt (' + Editor.params.openings.filter(o => o.type === 'win').length + ' Fenster, ' + Editor.params.openings.filter(o => o.type === 'door').length + ' Türen), Dachform: ' + Editor.params.roofShape : 'keine einzelnen Öffnungen erkannt — Raster-Fallback');
         if (Editor.osm) {
           document.getElementById('pW').value = Math.round(Editor.osm.wM * 2) / 2;
@@ -651,7 +689,7 @@ const Editor = {
       drop.classList.remove('over');
       if (e.dataTransfer.files[0]) Editor.loadFile(e.dataTransfer.files[0]);
     };
-    for (const id of ['pName', 'pW', 'pD', 'pFloors', 'pWins', 'pDoors', 'pRoofShape', 'pFacade', 'pRoof', 'pMode', 'pAngle']) {
+    for (const id of ['pName', 'pW', 'pD', 'pFloors', 'pWins', 'pDoors', 'pRoofShape', 'pFacade', 'pRoof', 'pMode', 'pAngle', 'pTerr', 'pTerrM']) {
       document.getElementById(id).addEventListener('input', () => {
         if (id === 'pMode' && Editor.img) {
           try {
@@ -665,6 +703,7 @@ const Editor = {
           document.getElementById('pFacade').value = Editor.params.facade;
           document.getElementById('pRoof').value = Editor.params.roofColor;
           if (['flat', 'gabled', 'hip', 'pyramidal'].includes(Editor.params.roofShape)) document.getElementById('pRoofShape').value = Editor.params.roofShape;
+          Editor.setTerrFields();
         }
         Editor.refreshPreview();
       });

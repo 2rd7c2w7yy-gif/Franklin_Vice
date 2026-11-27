@@ -928,6 +928,39 @@ const Game = {
     g.strokeStyle = cl >= 0.5 ? '#7dff6a' : '#ff5050';
     g.lineWidth = 2.5 / z;
     g.stroke();
+    const terrG = ep.facade && ep.facade.terr && ep.facade.terr.m > 0 && (ep.facade.floors | 0) >= 2 ? ep.facade.terr : null;
+    if (terrG) {
+      let bi = 0, bl = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const q = pts[(i + 1) % pts.length];
+        const l = Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]);
+        if (l > bl) { bl = l; bi = i; }
+      }
+      const q = pts[(bi + 1) % pts.length];
+      let dx = q[0] - pts[bi][0], dy = q[1] - pts[bi][1];
+      const dl = Math.hypot(dx, dy) || 1;
+      const nx = -dy / dl, ny = dx / dl;
+      const t = terrG.m * World.s;
+      const cx = ep.cx, cy = ep.cy;
+      const inner = pts.map(p => {
+        const d = (p[0] - cx) * nx + (p[1] - cy) * ny;
+        const sgn = d >= 0 ? 1 : -1;
+        let mv = 0;
+        if (terrG.sides === 'both') mv = -sgn * t;
+        else if (terrG.sides === 'left' && d > 0) mv = -t;
+        else if (terrG.sides === 'right' && d < 0) mv = t;
+        return [p[0] + nx * mv, p[1] + ny * mv];
+      });
+      g.beginPath();
+      g.moveTo(inner[0][0], inner[0][1]);
+      for (let i = 1; i < inner.length; i++) g.lineTo(inner[i][0], inner[i][1]);
+      g.closePath();
+      g.strokeStyle = 'rgba(255,230,60,0.9)';
+      g.lineWidth = 1.5 / z;
+      g.setLineDash([5 / z, 4 / z]);
+      g.stroke();
+      g.setLineDash([]);
+    }
     const ux = Math.cos(ep.rot), uy = Math.sin(ep.rot);
     g.beginPath();
     g.moveTo(ep.cx, ep.cy);

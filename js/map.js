@@ -707,8 +707,10 @@ const World = {
       for (let i = 1; i < b.pts.length; i++) g.lineTo(b.pts[i][0], b.pts[i][1]);
       g.closePath();
       g.fill();
-      if ((b.name || '').includes('California')) {
-        const t = 2 * this.s;
+      const terrB = (b.name || '').includes('California') ? { m: 2, sides: 'both' } : (b.facade && b.facade.terr && b.facade.terr.m > 0 && (b.facade.floors | 0) >= 2 ? b.facade.terr : null);
+      if (terrB) {
+        const t = terrB.m * this.s;
+        const tSides = terrB.sides || 'both';
         const ys = b.pts.map(p => p[1]);
         const yMin = Math.min(...ys), yMax = Math.max(...ys);
         const clipY = (poly, lo, hi) => {
@@ -738,9 +740,9 @@ const World = {
           g.closePath();
           g.fill();
         };
-        fillPoly(clipY(b.pts, -1e9, yMin + t), 'rgba(190,225,170,0.95)');
-        fillPoly(clipY(b.pts, yMax - t, 1e9), 'rgba(190,225,170,0.95)');
-        const inner = clipY(b.pts, yMin + t, yMax - t);
+        if (tSides === 'both' || tSides === 'right') fillPoly(clipY(b.pts, -1e9, yMin + t), 'rgba(190,225,170,0.95)');
+        if (tSides === 'both' || tSides === 'left') fillPoly(clipY(b.pts, yMax - t, 1e9), 'rgba(190,225,170,0.95)');
+        const inner = clipY(b.pts, tSides === 'left' ? -1e9 : yMin + t, tSides === 'right' ? 1e9 : yMax - t);
         fillPoly(inner, 'rgba(25,60,20,0.38)');
         if (inner.length >= 3) {
           g.strokeStyle = 'rgba(0,0,0,0.45)';
