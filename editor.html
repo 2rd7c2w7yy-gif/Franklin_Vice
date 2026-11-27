@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRANKLIN VICE — Gebäude-Editor</title>
+<style>
+  body { margin: 0; background: #17102b; color: #eee; font-family: Verdana, sans-serif; }
+  header { padding: 14px 20px; background: linear-gradient(90deg, #2b1055, #7a2d8c); display: flex; align-items: center; gap: 18px; }
+  header h1 { font-size: 22px; margin: 0; color: #ffe9fb; text-shadow: 0 0 14px #ff4fd8; }
+  header a { color: #7dff6a; text-decoration: none; font-weight: bold; }
+  main { padding: 18px 20px; max-width: 1150px; margin: 0 auto; }
+  .panel { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  #drop { border: 2px dashed #ff4fd8; border-radius: 10px; padding: 26px; text-align: center; cursor: pointer; }
+  #drop.over { background: rgba(255,79,216,0.15); }
+  button, .btn { background: #7a2d8c; color: #fff; border: 1px solid #ff4fd8; border-radius: 8px; padding: 9px 14px; font: bold 14px Verdana, sans-serif; cursor: pointer; margin: 4px 4px 4px 0; }
+  button:hover { background: #9a3dad; }
+  button.green { background: #1d6b2f; border-color: #7dff6a; }
+  button.green:hover { background: #2a8a40; }
+  button.gray { background: #444; border-color: #888; }
+  input[type=text], input[type=number], select { background: #241640; color: #fff; border: 1px solid #7a2d8c; border-radius: 6px; padding: 6px 8px; font: 14px Verdana, sans-serif; }
+  input[type=color] { width: 44px; height: 30px; border: 1px solid #7a2d8c; background: none; padding: 2px; }
+  label { font-size: 13px; color: #cbb8e8; display: inline-block; margin: 6px 14px 6px 0; }
+  .cols { display: flex; gap: 18px; flex-wrap: wrap; }
+  .cols > div { flex: 1; min-width: 300px; }
+  canvas { background: #000; border-radius: 8px; max-width: 100%; }
+  #info { font-size: 13px; color: #ffe63c; white-space: pre-line; }
+  .small { font-size: 12px; color: #b9a8d8; }
+  #editsList div { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+  h2 { font-size: 17px; color: #ff9ad8; margin: 4px 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛠 FRANKLIN VICE — Gebäude-Editor</h1>
+  <a href="index.html">← Zum Spiel</a>
+</header>
+<main>
+  <div class="panel">
+    <h2>1 · Foto / Screenshot hochladen</h2>
+    <div id="drop">📷 Hier klicken oder Datei hineinziehen — Foto des Hauses (am besten mit EXIF-GPS, typischerweise ca. 30° von vorn/oben, sodass Fassade UND Dach sichtbar sind) oder Screenshot aus einer Karten-App (Dachaufsicht)<br>
+      <span class="small">Das Foto selbst wird nicht im Spiel angezeigt und nicht gespeichert — nur abgeleitete Maße, Etagen, Fenster, Farben. Bitte keine Google/Apple-StreetView-Bilder verwenden (ToS).</span>
+    </div>
+    <input type="file" id="file" accept="image/*" style="display:none">
+    <div id="info"></div>
+  </div>
+  <div class="panel" id="analyzePanel" style="display:none">
+    <h2>2 · Analyse &amp; Feinschliff</h2>
+    <div class="cols">
+      <div><div class="small">Original</div><canvas id="srcCv" width="360" height="260"></canvas></div>
+      <div><div class="small">Vorschau: so wird das Haus in der Karte (2D-Dach + 3D-Fassade)</div><canvas id="prevCv" width="360" height="300"></canvas></div>
+    </div>
+    <div style="margin-top:10px">
+      <label>Name <input type="text" id="pName" value="Eigenes Gebäude" size="18"></label>
+      <label>Breite (m) <input type="number" id="pW" min="4" max="60" step="0.5" value="15"></label>
+      <label>Tiefe (m) <input type="number" id="pD" min="4" max="40" step="0.5" value="8"></label>
+      <label>Etagen <input type="number" id="pFloors" min="1" max="8" step="1" value="3"></label>
+      <label>Fenster/Etage <input type="number" id="pWins" min="0" max="8" step="1" value="3"></label>
+      <label>Türen <input type="number" id="pDoors" min="0" max="2" step="1" value="1"></label>
+      <label>Dachform <select id="pRoofShape"><option value="flat">Flachdach</option><option value="gabled">Satteldach</option><option value="hip">Walmdach</option><option value="pyramidal">Pyramidendach</option></select></label>
+      <label>Dachterrasse <select id="pTerr"><option value="none">keine</option><option value="both">beidseitig (Staffelgeschoss)</option><option value="left">nur eine Seite</option><option value="right">nur andere Seite</option></select></label>
+      <label>Terrassentiefe (m) <input type="number" id="pTerrM" min="0" max="8" step="0.5" value="2"></label>
+      <label>Fassade <input type="color" id="pFacade" value="#d4c9b8"></label>
+      <label>Dach <input type="color" id="pRoof" value="#6a4a3a"></label>
+      <label>Ansicht <select id="pMode"><option value="auto">Auto</option><option value="fassade">Hausfoto (Schräg-/Seitenansicht)</option><option value="dach">Karten-Screenshot (Dachaufsicht)</option></select></label>
+      <label>Kamerawinkel Foto <input type="number" id="pAngle" min="10" max="80" step="5" value="30">°</label>
+    </div>
+    <div id="osmBox" style="margin-top:8px; display:none">
+      <span id="osmInfo" class="small"></span><br>
+      <button id="osmRot" class="gray">↻ Ausrichtung aus OSM übernehmen</button>
+      <button id="osmFoot" class="gray">▦ OSM-Grundriss + Größe übernehmen</button>
+    </div>
+    <div style="margin-top:10px">
+      <button id="placeBtn" class="green">➜ In der 2D-Karte platzieren &amp; drehen</button>
+      <button id="exportBtn">💾 JSON exportieren</button>
+      <button id="importBtn" class="gray">📂 JSON importieren</button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+    </div>
+  </div>
+  <div class="panel">
+    <h2>3 · Meine Gebäude (im Browser gespeichert)</h2>
+    <div id="editsList" class="small">—</div>
+    <div class="small" style="margin-top:8px">Die Gebäude liegen im localStorage dieses Browsers und werden beim Spiel automatisch geladen (2D + 3D). Mit „JSON exportieren“ bekommst du eine Datei, die du ins Repo legen kannst (z. B. als `custom_buildings.json`), um sie dauerhaft zu sichern.</div>
+  </div>
+</main>
+<script src="js/geodata.js"></script>
+<script src="js/facade.js"></script>
+<script src="js/editor.js"></script>
+</body>
+</html>

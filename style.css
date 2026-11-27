@@ -1,0 +1,25 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0b14;
+}
+
+#gl, #game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+#gl {
+  z-index: 0;
+}
+
+#game {
+  z-index: 1;
+  background: transparent;
+  cursor: crosshair;
+}
